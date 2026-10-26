@@ -115,7 +115,8 @@ for (const stage of ['after_version','after_pointer','after_draft','after_event'
   test(`publication rollback at ${stage} leaves all durable state unchanged`, async t => {
     let enabled = false;
     const { service: s, path } = fixture(t, { faultInjector: where => { if (enabled && where === stage) throw Error('injected'); } });
-    const { draft, skill } = await initial(s);
+    const { draft: original, skill } = await initial(s);
+    const draft = await s.saveDraft(a, { draftId: original.id, expectedRevision: original.revision, content: content('changed for rollback') });
     const db = new DatabaseSync(path);
     const snapshot = () => Object.fromEntries(['versions','skills','drafts','events','audit','requests'].map(table => [table, db.prepare(`SELECT * FROM ${table}`).all()]));
     const before = snapshot(); enabled = true;
@@ -128,7 +129,9 @@ for (const stage of ['after_version','after_pointer','after_draft','after_event'
 
 test('two independent processes concurrently publish one success; replay across processes stays singular', async t => {
   const { service: s, path } = fixture(t); const { skill } = await initial(s);
-  const da = await s.createDraft(a, skill.id); const db = await s.createDraft(b, skill.id);
+  const first = await s.createDraft(a, skill.id); const second = await s.createDraft(b, skill.id);
+  const da = await s.saveDraft(a, { draftId: first.id, expectedRevision: first.revision, content: content('author a change') });
+  const db = await s.saveDraft(b, { draftId: second.id, expectedRevision: second.revision, content: content('author b change') });
   const start = async () => {
     const child = fork(new URL('./process-worker.ts', import.meta.url), [path], { execArgv: ['--import', 'tsx'], stdio: ['ignore','ignore','pipe','ipc'] });
     await once(child, 'message');
@@ -216,4 +219,49 @@ test('independent connection save invalidates preview; permission revocation als
     allowed = false;
     await assert.rejects(s.publishDraft(a,{...request(draft),expectedRevision:1,expectedBaseVersionId:null}),code('FORBIDDEN'));
   } finally { second.close(); }
+});
+
+
+test('adopting latest content rejects empty publication without writes; replay and subsequent edits succeed', async t => {
+  const { service: s, path } = fixture(t);
+  const { skill, draft, version } = await initial(s);
+  const stale = await s.createDraft(b, skill.id);
+  const edited = await s.saveDraft(a, {
+    draftId: draft.id, expectedRevision: draft.revision,
+    content: content('latest', [{ path: 'notes.txt', content: 'resource', mediaType: 'text/plain' }]),
+  });
+  const publishedInput = request(edited, 'second');
+  const latest = await s.publishDraft(a, publishedInput);
+  const preview = await s.previewDraftUpdate(b, {
+    draftId: stale.id, expectedRevision: stale.revision, content: content('discard my edit'),
+  });
+  const adopted = await s.applyDraftUpdate(b, {
+    draftId: stale.id, expectedRevision: stale.revision, targetVersionId: preview.targetVersionId,
+    confirmationToken: preview.confirmationToken,
+    resolvedContent: { files: [...preview.latestContent.files].reverse() }, idempotencyKey: 'adopt-latest',
+  });
+  assert.equal(adopted.baseVersionId, latest.id);
+  assert.equal(checksum(adopted.content), latest.checksum);
+  const db = new DatabaseSync(path);
+  try {
+    const snapshot = () => Object.fromEntries(['versions', 'skills', 'drafts', 'events', 'audit', 'requests'].map(
+      table => [table, db.prepare(`SELECT * FROM ${table}`).all()],
+    ));
+    const before = snapshot();
+    await assert.rejects(s.publishDraft(b, request(adopted, 'next')), code('VALIDATION'));
+    assert.deepEqual(snapshot(), before);
+    // The publishing author's draft now matches current, but the successful receipt wins.
+    assert.deepEqual(await s.publishDraft(a, publishedInput), latest);
+    assert.deepEqual(snapshot(), before);
+    const changed = await s.saveDraft(b, {
+      draftId: adopted.id, expectedRevision: adopted.revision, content: content('new author edit'),
+    });
+    // Reuse the failed key: no receipt was consumed by the rejected no-op.
+    const next = await s.publishDraft(b, request(changed, 'next'));
+    assert.equal(next.number, latest.number + 1);
+    assert.equal(next.parentVersionId, latest.id);
+    assert.equal((await s.listUpdateEvents(a, 0)).length, 3);
+    assert.deepEqual(await s.publishDraft(a, publishedInput), latest);
+    assert.equal(version.number, 1);
+  } finally { db.close(); }
 });

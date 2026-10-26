@@ -55,3 +55,18 @@ npx --yes --package node@24 node --input-type=module -e "import {createLibrarySe
 - 身份/成员/脚本/平台包规则回调仍由可信宿主提供，未接生产认证或Agent；无跨库任务接受一致性改动。
 - token快照持久保存，当前无自动过期/清理策略；未来可增加保留策略。预览与幂等记录均不作为事件广播。
 - 旧v1流程测试已用当前v2验收测试替换；未声称继续支持已移除评审功能。仅测试本机平台Node24/26，未测Windows/Linux或早期Node24补丁。
+
+## A2 后续：恢复无内容变化拒绝规则
+
+2026-10-26，小范围补充：publishDraft 在已成功幂等回执重放之后、完整内容校验之后、任何发布写入之前，比较待发布内容的规范 checksum 与当前正式版本 checksum。已有当前版本且相同时返回 VALIDATION；首次发布无当前版本，仍允许。作者权限、修订、过期基线检查及所有事务规则保留。
+
+新增第16项回归：B显式同步并完全采用A的最新版（输入文件倒序，规范checksum仍相同），提交被拒绝；逐表比较versions/skills/drafts/events/audit/requests，全部行不变。A原成功请求在其草稿与当前一致时仍返回原版本且不写入；B修改内容后可用先前被拒绝的幂等键发布下一版，证明失败不消耗回执；A旧请求在后续版本生效后仍正确重放。原并发及故障测试改用实际内容修改，继续验证原事务性质。
+
+本次命令及结果：
+
+- 仓库根 `npm run typecheck --prefix src/modules/service`：exit 0，无类型错误。
+- 仓库根 `npm test --prefix src/modules/service`：Node26，16/16通过，0失败/跳过。
+- 模块目录 `src/modules/service` 执行 `npx --yes --package node@24 node --import tsx --test test/*.test.ts`：Node24，16/16通过，0失败/跳过。
+- 仓库根 `git diff --check`：exit 0。
+
+仅修改service实现/测试和本报告，无共享契约或其他模块修改；前述集成限制不变。后续提交SHA由本次worker_done提供。

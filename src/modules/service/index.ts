@@ -444,6 +444,8 @@ export function createLibraryService(
           nonempty(input.changeSummary, "修改说明", 2000);
           const current = s.currentVersionId ? versionGet(actor, s.currentVersionId) : null;
           const content = contentCheck(actor, d.content, current?.content, true);
+          if (current && checksum(content) === current.checksum)
+            fail("VALIDATION", "没有修改内容，无法提交");
           const v: SkillVersion = {
             id: id(), skillId: s.id, teamId: actor.teamId,
             number: (current?.number ?? 0) + 1, parentVersionId: s.currentVersionId,
