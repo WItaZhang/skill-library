@@ -8,12 +8,14 @@ Orca run：run_8b186ce69b52。共享基线：2fedeea。组合验收脚本：src/
 
 | 模块 | 分支 | Task | Dispatch | 当前状态 |
 | --- | --- | --- | --- | --- |
-| 管理服务 | WItaZhang/skill-service-v2 | task_a342e4f530f2；补充 task_c98ff99bb1db | ctx_2494fa6aa5f4；补充 ctx_22acbe2c8826 | da980c1，16项测试在Node24/26通过，等待组合验收 |
+| 管理服务 | WItaZhang/skill-service-v2 | task_a342e4f530f2；补充 task_c98ff99bb1db | ctx_2494fa6aa5f4；补充 ctx_22acbe2c8826 | da980c1，16项测试在Node24/26通过，组合验收通过 |
 | 编辑界面 | WItaZhang/skill-web-v2 | task_20ef8aac8336 | ctx_cc82fb503f07 | 开发与验收中 |
-| 广播适配 | WItaZhang/skill-broadcast-v2 | task_d90e189a6082 | ctx_3d5e4c0bc2b9 | 开发与验收中 |
+| 广播适配 | WItaZhang/skill-broadcast-v2 | task_d90e189a6082 | ctx_3d5e4c0bc2b9 | bb74c4a，8项传输测试通过，组合验收通过 |
 | 原运行时 | WItaZhang/skill-runtime | 前轮已完成 | 已释放 | 1e9f02b，本轮不改实现，组合时回归 |
 
 管理服务的首次交付为c61b840，交叉检查后补充da980c1：无实际内容变化的发布返回校验错误，不产生空版本/广播；已成功请求重试仍返回原回执。无需另一人审批，旧review/merge API已不在服务对象上。
+
+管理端实际执行临时组合验收：3项真实SQLite/HTTP/SSE测试通过，另有9项原运行时回归通过。包括独立OS进程发布后已连接的SSE客户端收到事件、断线补发、作者同步后发布以及旧任务资源固定。组合采用已提交代码和共享契约，不执行merge、不改动模块worktree。
 
 ## 交叉检查重点
 

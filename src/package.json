@@ -8,7 +8,9 @@
     "test:service": "npm --prefix modules/service test",
     "test:runtime": "npm --prefix modules/runtime test",
     "test:web": "npm --prefix modules/web test",
-    "test": "npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web"
+    "test:broadcast": "npm --prefix modules/broadcast test",
+    "test:publication": "node --experimental-strip-types --test acceptance/publication.test.ts",
+    "test": "npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web && npm run test:broadcast && npm run test:publication"
   }
 }
 
