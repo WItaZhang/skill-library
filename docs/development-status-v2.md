@@ -9,13 +9,17 @@ Orca run：run_8b186ce69b52。共享基线：2fedeea。组合验收脚本：src/
 | 模块 | 分支 | Task | Dispatch | 当前状态 |
 | --- | --- | --- | --- | --- |
 | 管理服务 | WItaZhang/skill-service-v2 | task_a342e4f530f2；补充 task_c98ff99bb1db | ctx_2494fa6aa5f4；补充 ctx_22acbe2c8826 | da980c1，16项测试在Node24/26通过，组合验收通过 |
-| 编辑界面 | WItaZhang/skill-web-v2 | task_20ef8aac8336 | ctx_cc82fb503f07 | 开发与验收中 |
+| 编辑界面 | WItaZhang/skill-web-v2 | task_20ef8aac8336 | ctx_cc82fb503f07 | 7990666，22项交互测试、构建和桌面浏览器演示检查通过 |
 | 广播适配 | WItaZhang/skill-broadcast-v2 | task_d90e189a6082 | ctx_3d5e4c0bc2b9 | bb74c4a，8项传输测试通过，组合验收通过 |
 | 原运行时 | WItaZhang/skill-runtime | 前轮已完成 | 已释放 | 1e9f02b，本轮不改实现，组合时回归 |
 
 管理服务的首次交付为c61b840，交叉检查后补充da980c1：无实际内容变化的发布返回校验错误，不产生空版本/广播；已成功请求重试仍返回原回执。无需另一人审批，旧review/merge API已不在服务对象上。
 
 管理端实际执行临时组合验收：3项真实SQLite/HTTP/SSE测试通过，另有9项原运行时回归通过。包括独立OS进程发布后已连接的SSE客户端收到事件、断线补发、作者同步后发布以及旧任务资源固定。组合采用已提交代码和共享契约，不执行merge、不改动模块worktree。
+
+本轮已结束：16项服务测试、22项前端交互测试、8项广播测试、3项真实组合测试和9项运行时回归通过。共享契约测试另有1项通过。模块测试由对应worker执行，组合与运行时回归由管理端实际执行。所有worker交付已处理，执行终端已释放；最初服务任务的资源所有权曾转交后续任务，现无待回收终端。所有分支和worktree保留，未合并或推送。
+
+前端桌面Chrome检查使用明确内存演示；真实组合测试使用SQLite与HTTP/SSE客户端，不将两者合称完整浏览器到生产Agent的端到端验收。生产身份、真实Agent、原生EventSource完整浏览器接线和窄屏回归仍未验收。
 
 ## 交叉检查重点
 
