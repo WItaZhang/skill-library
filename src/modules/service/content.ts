@@ -53,7 +53,7 @@ export const checksum = (content: SkillContent) =>
       })),
   );
 export const emptyContent = (): SkillContent => ({ files: [] });
-export function validateContent(value: SkillContent): SkillContent {
+export function validateContent(value: SkillContent, complete = true): SkillContent {
   if (!value || !Array.isArray(value.files) || value.files.length > 256)
     fail("VALIDATION", "内容必须包含文件清单（最多256个文件）");
   const seen = new Set<string>();
@@ -86,7 +86,7 @@ export function validateContent(value: SkillContent): SkillContent {
       )
     )
       fail("VALIDATION", "不支持此资源类型", { path: file.path });
-    if (file.mediaType === "application/json") {
+    if (complete && file.mediaType === "application/json") {
       try {
         JSON.parse(file.content);
       } catch {
@@ -101,6 +101,7 @@ export function validateContent(value: SkillContent): SkillContent {
       mediaType: file.mediaType,
     };
   });
+  if (!complete) return { files: files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0) };
   const main = files.find((f) => f.path === "SKILL.md");
   if (!main || main.mediaType !== "text/markdown" || !main.content.trim())
     fail("VALIDATION", "必须提供非空的Markdown格式SKILL.md", {

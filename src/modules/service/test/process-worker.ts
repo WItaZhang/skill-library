@@ -4,8 +4,8 @@ process.send?.({ ready: true });
 process.on("message", async (message: any) => {
   try {
     const result =
-      message.operation === "merge"
-        ? await service.mergeProposal(message.actor, message.input)
+      message.operation === "publish"
+        ? await service.publishDraft(message.actor, message.input)
         : {
             versions: await service.listVersions(
               message.actor,

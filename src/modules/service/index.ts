@@ -6,10 +6,9 @@ import {
   type LibraryService,
   type Skill,
   type Draft,
-  type Proposal,
   type SkillVersion,
   type SkillContent,
-  type MergePreview,
+  type DraftUpdatePreview,
   type SkillUpdateEvent,
   type AuditEntry,
 } from "../../contracts/index.ts";
@@ -40,13 +39,13 @@ export interface LibraryOptions {
     stage:
       | "after_version"
       | "after_pointer"
-      | "after_proposal"
+      | "after_draft"
+      | "after_request"
       | "after_event"
       | "after_audit",
   ) => void;
 }
 type StoredSkill = Skill & { creatorId: string };
-type StoredProposal = Proposal & { draftId: string };
 type Entity = { id: string; teamId: string };
 const now = () => new Date().toISOString();
 const id = () => randomUUID();
@@ -73,6 +72,7 @@ export function createLibraryService(
     CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY, team TEXT NOT NULL, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS requests(team TEXT NOT NULL, actor TEXT NOT NULL, operation TEXT NOT NULL, key TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(team,actor,operation,key));
     CREATE TABLE IF NOT EXISTS previews(token TEXT PRIMARY KEY, team TEXT NOT NULL, actor TEXT NOT NULL, fingerprint TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS draft_previews(token TEXT PRIMARY KEY, team TEXT NOT NULL, actor TEXT NOT NULL, snapshot TEXT NOT NULL, fingerprint TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS skills_team ON skills(team);
     CREATE INDEX IF NOT EXISTS drafts_team ON drafts(team);
     CREATE INDEX IF NOT EXISTS proposals_team ON proposals(team);
@@ -95,15 +95,16 @@ export function createLibraryService(
     CREATE TRIGGER IF NOT EXISTS audit_no_delete BEFORE DELETE ON audit BEGIN SELECT RAISE(ABORT,'immutable audit'); END;
   `);
   if (
-    (
+    ![1, 2].includes((
       db.prepare("SELECT version FROM service_schema").get() as {
         version: number;
       }
-    ).version !== 1
+    ).version)
   ) {
     db.close();
     fail("UNAVAILABLE", "数据库版本不受支持");
   }
+  db.exec("UPDATE service_schema SET version=2 WHERE version=1");
   let closed = false;
   type Table = "skills" | "drafts" | "proposals" | "versions" | "audit";
   const all = <T>(table: Table, actor: Actor): T[] =>
@@ -178,7 +179,6 @@ export function createLibraryService(
     return s;
   };
   const publicSkill = ({ creatorId: _, ...s }: StoredSkill): Skill => s;
-  const publicProposal = ({ draftId: _, ...p }: StoredProposal): Proposal => p;
   const ownDraft = (actor: Actor, key: string) => {
     const d = get<Draft>("drafts", actor, key);
     const s = skillGet(actor, d.skillId);
@@ -200,21 +200,9 @@ export function createLibraryService(
         currentRevision: actual,
       });
   };
-  const pending = (p: Proposal) => {
-    if (p.status !== "pending")
-      fail("STALE_REVISION", "此提案已处理或已被新修订替代");
-  };
-  const reviewer = (actor: Actor, p: Proposal) => {
-    const s = skillGet(actor, p.skillId);
-    if (p.authorId === actor.userId)
-      fail("FORBIDDEN", "不能评审自己的修改，请由另一位维护者评审");
-    if (!s.maintainerIds.includes(actor.userId))
-      fail("FORBIDDEN", "只有当前维护者可以评审");
-    return s;
-  };
   const maintainers = (actor: Actor, users: string[]) => {
-    if (!Array.isArray(users) || !users.length || users.length > 100)
-      fail("VALIDATION", "请配置至少一位维护者");
+    if (!Array.isArray(users) || users.length > 100)
+      fail("VALIDATION", "维护者清单无效");
     for (const user of users) {
       nonempty(user, "维护者ID");
       if (options.isTeamMember && !options.isTeamMember(actor.teamId, user))
@@ -222,22 +210,13 @@ export function createLibraryService(
     }
     return [...new Set(users)];
   };
-  const eligibleReviewer = (actor: Actor, s: Skill, author: string) => {
-    if (
-      !s.maintainerIds.some(
-        (u) =>
-          u !== author &&
-          (!options.isTeamMember || options.isTeamMember(actor.teamId, u)),
-      )
-    )
-      fail("VALIDATION", "请联系管理员配置另一位有效维护者，作者不能自审");
-  };
   const contentCheck = (
     actor: Actor,
     content: SkillContent,
     before = emptyContent(),
+    complete = false,
   ) => {
-    const normalized = validateContent(content);
+    const normalized = validateContent(content, complete);
     for (const change of compare(before, normalized)) {
       const file =
         normalized.files.find((f) => f.path === change.path) ??
@@ -250,7 +229,7 @@ export function createLibraryService(
           fail("FORBIDDEN", "脚本修改需要平台授权", { path: change.path });
       }
     }
-    options.validatePackage?.(actor, structuredClone(normalized));
+    if (complete) options.validatePackage?.(actor, structuredClone(normalized));
     return normalized;
   };
   const audit = (
@@ -295,34 +274,8 @@ export function createLibraryService(
       fingerprint,
       JSON.stringify(result),
     );
+    options.faultInjector?.("after_request");
     return result;
-  };
-  const preview = (
-    actor: Actor,
-    p: Proposal,
-  ): Omit<MergePreview, "confirmationToken"> => {
-    const s = skillGet(actor, p.skillId);
-    if (
-      p.authorId !== actor.userId &&
-      !s.maintainerIds.includes(actor.userId)
-    ) {
-      fail("FORBIDDEN", "只有作者或当前维护者可以预览修改");
-    }
-    if (!["pending", "changes_requested", "conflicted"].includes(p.status)) {
-      fail("STALE_REVISION", "此提案已结束，请查看历史或新的提案");
-    }
-    const base = p.baseVersionId
-      ? versionGet(actor, p.baseVersionId).content
-      : emptyContent();
-    const current = s.currentVersionId
-      ? versionGet(actor, s.currentVersionId).content
-      : emptyContent();
-    return {
-      proposalId: p.id,
-      proposalRevision: p.revision,
-      currentVersionId: s.currentVersionId,
-      ...threeWay(base, current, p.content),
-    };
   };
   const visible = (actor: Actor, s: StoredSkill) =>
     s.currentVersionId ||
@@ -377,7 +330,6 @@ export function createLibraryService(
           createdAt,
           creatorId: actor.userId,
         };
-        eligibleReviewer(actor, s, actor.userId);
         const d: Draft = {
           id: id(),
           skillId: s.id,
@@ -480,156 +432,23 @@ export function createLibraryService(
         audit(actor, "draft.save", d.id, { revision: d.revision });
         return d;
       }),
-    submitProposal: (actor, input) =>
+    publishDraft: (actor, input) =>
       transaction(actor, true, () => {
         objectInput(input);
         const d = ownDraft(actor, input.draftId);
-        return replay(actor, "submit", input, () => {
+        return replay(actor, "publish", input, () => {
           checkRevision(d.revision, input.expectedRevision);
-          nonempty(input.changeSummary, "修改说明", 2000);
           const s = skillGet(actor, d.skillId);
-          eligibleReviewer(actor, s, actor.userId);
-          const base = d.baseVersionId
-            ? versionGet(actor, d.baseVersionId).content
-            : emptyContent();
-          const content = contentCheck(actor, d.content, base);
-          if (checksum(content) === checksum(base))
-            fail("VALIDATION", "没有修改内容，无法提交");
-          const prior = all<StoredProposal>("proposals", actor).filter(
-            (p) => p.draftId === d.id,
-          );
-          if (prior.some((p) => p.revision === d.revision))
-            fail("STALE_REVISION", "此草稿修订已提交，请修改后重新提交");
-          for (const old of prior.filter(
-            (p) => p.status !== "merged" && p.status !== "withdrawn",
-          )) {
-            old.status = "withdrawn";
-            update("proposals", old);
-            audit(actor, "proposal.supersede", old.id, { draftId: d.id });
-          }
-          const p: StoredProposal = {
-            id: id(),
-            draftId: d.id,
-            skillId: d.skillId,
-            teamId: actor.teamId,
-            authorId: actor.userId,
-            baseVersionId: d.baseVersionId,
-            revision: d.revision,
-            content,
-            changeSummary: input.changeSummary.trim(),
-            status: "pending",
-            createdAt: now(),
-          };
-          insert("proposals", p);
-          audit(actor, "proposal.submit", p.id, {
-            draftId: d.id,
-            revision: p.revision,
-            idempotencyKey: input.idempotencyKey,
-          });
-          return publicProposal(p);
-        });
-      }),
-    listProposals: (actor, key) =>
-      transaction(actor, false, () => {
-        if (key) skillGet(actor, key);
-        return all<StoredProposal>("proposals", actor)
-          .filter(
-            (p) =>
-              (!key || p.skillId === key) &&
-              visible(actor, get<StoredSkill>("skills", actor, p.skillId)),
-          )
-          .map(publicProposal);
-      }),
-    getProposal: (actor, key) =>
-      transaction(actor, false, () => {
-        const p = get<StoredProposal>("proposals", actor, key);
-        skillGet(actor, p.skillId);
-        return publicProposal(p);
-      }),
-    reviewProposal: (actor, input) =>
-      transaction(actor, true, () => {
-        objectInput(input);
-        const p = get<StoredProposal>("proposals", actor, input.proposalId);
-        reviewer(actor, p);
-        checkRevision(p.revision, input.expectedRevision);
-        pending(p);
-        nonempty(input.comment, "评审意见", 4000);
-        if (!["request_changes", "reject"].includes(input.action))
-          fail("VALIDATION", "评审操作无效");
-        p.status = input.action === "reject" ? "rejected" : "changes_requested";
-        p.reviewComment = input.comment;
-        update("proposals", p);
-        audit(actor, `proposal.${input.action}`, p.id, {
-          revision: p.revision,
-        });
-        return publicProposal(p);
-      }),
-    withdrawProposal: (actor, key, expected) =>
-      transaction(actor, true, () => {
-        const p = get<StoredProposal>("proposals", actor, key);
-        edit(actor, skillGet(actor, p.skillId));
-        if (p.authorId !== actor.userId)
-          fail("FORBIDDEN", "只能撤回自己的提案");
-        checkRevision(p.revision, expected);
-        if (["merged", "withdrawn", "rejected"].includes(p.status))
-          fail("STALE_REVISION", "此提案无法撤回");
-        p.status = "withdrawn";
-        update("proposals", p);
-        audit(actor, "proposal.withdraw", p.id, { revision: p.revision });
-        return publicProposal(p);
-      }),
-    previewMerge: (actor, key) =>
-      transaction(actor, true, () => {
-        const p = get<StoredProposal>("proposals", actor, key);
-        const result = preview(actor, p);
-        const confirmationToken = id();
-        db.prepare("INSERT INTO previews VALUES(?,?,?,?)").run(
-          confirmationToken,
-          actor.teamId,
-          actor.userId,
-          digest(result),
-        );
-        return { ...result, confirmationToken };
-      }),
-    mergeProposal: (actor, input) =>
-      transaction(actor, true, () => {
-        objectInput(input);
-        const p = get<StoredProposal>("proposals", actor, input.proposalId);
-        const s = reviewer(actor, p);
-        return replay(actor, "merge", input, () => {
-          checkRevision(p.revision, input.expectedRevision);
-          pending(p);
-          if (s.currentVersionId !== input.expectedCurrentVersionId)
-            fail("STALE_REVISION", "已有新版本生效，请重新预览并确认");
-          const result = preview(actor, p);
-          nonempty(input.confirmationToken, "合并确认标识");
-          const token = db
-            .prepare(
-              "SELECT fingerprint FROM previews WHERE token=? AND team=? AND actor=?",
-            )
-            .get(input.confirmationToken, actor.teamId, actor.userId);
-          if (!token || token.fingerprint !== digest(result))
-            fail("STALE_REVISION", "合并预览已失效，请重新预览并确认");
-          if (result.conflicts.length)
-            fail("CONFLICT", "存在修改冲突，请解决后重新提交", {
-              conflicts: result.conflicts,
-            });
-          const current = s.currentVersionId
-            ? versionGet(actor, s.currentVersionId)
-            : null;
-          const content = contentCheck(actor, result.content, current?.content);
+          if (d.baseVersionId !== input.expectedBaseVersionId || d.baseVersionId !== s.currentVersionId)
+            fail("STALE_REVISION", "有新版本待处理，请查看更新并确认同步");
+          nonempty(input.changeSummary, "修改说明", 2000);
+          const current = s.currentVersionId ? versionGet(actor, s.currentVersionId) : null;
+          const content = contentCheck(actor, d.content, current?.content, true);
           const v: SkillVersion = {
-            id: id(),
-            skillId: s.id,
-            teamId: actor.teamId,
-            number: (current?.number ?? 0) + 1,
-            parentVersionId: s.currentVersionId,
-            content,
-            checksum: checksum(content),
-            changeSummary: p.changeSummary,
-            authorId: p.authorId,
-            reviewerId: actor.userId,
-            createdAt: now(),
+            id: id(), skillId: s.id, teamId: actor.teamId,
+            number: (current?.number ?? 0) + 1, parentVersionId: s.currentVersionId,
+            content, checksum: checksum(content), changeSummary: input.changeSummary.trim(),
+            authorId: actor.userId, reviewerId: null, approvalMode: "automatic", createdAt: now(),
           };
           insert("versions", v);
           options.faultInjector?.("after_version");
@@ -637,34 +456,71 @@ export function createLibraryService(
           s.currentVersionId = v.id;
           update("skills", s);
           options.faultInjector?.("after_pointer");
-          p.status = "merged";
-          p.mergedVersionId = v.id;
-          update("proposals", p);
-          options.faultInjector?.("after_proposal");
-          const event = {
-            id: id(),
-            teamId: actor.teamId,
-            skillId: s.id,
-            previousVersionId,
-            versionId: v.id,
-            createdAt: now(),
-          };
-          db.prepare("INSERT INTO events(id,team,data) VALUES(?,?,?)").run(
-            event.id,
-            actor.teamId,
-            JSON.stringify(event),
-          );
+          d.baseVersionId = v.id;
+          d.content = content;
+          d.revision++;
+          d.updatedAt = now();
+          update("drafts", d);
+          options.faultInjector?.("after_draft");
+          const event = { id: id(), teamId: actor.teamId, skillId: s.id,
+            previousVersionId, versionId: v.id, createdAt: now() };
+          db.prepare("INSERT INTO events(id,team,data) VALUES(?,?,?)").run(event.id, actor.teamId, JSON.stringify(event));
           options.faultInjector?.("after_event");
-          audit(actor, "proposal.merge", p.id, {
-            revision: p.revision,
-            previousVersionId,
-            versionId: v.id,
-            authorId: p.authorId,
-            checksum: v.checksum,
-            idempotencyKey: input.idempotencyKey,
-          });
+          audit(actor, "draft.publish", d.id, { previousVersionId, versionId: v.id,
+            revision: input.expectedRevision, checksum: v.checksum, idempotencyKey: input.idempotencyKey });
           options.faultInjector?.("after_audit");
           return v;
+        });
+      }),
+    previewDraftUpdate: (actor, input) =>
+      transaction(actor, true, () => {
+        objectInput(input);
+        const d = ownDraft(actor, input.draftId);
+        checkRevision(d.revision, input.expectedRevision);
+        const s = skillGet(actor, d.skillId);
+        const localContent = contentCheck(actor, input.content, d.content);
+        const baseContent = d.baseVersionId ? versionGet(actor, d.baseVersionId).content : emptyContent();
+        const latestContent = s.currentVersionId ? versionGet(actor, s.currentVersionId).content : emptyContent();
+        const merged = threeWay(baseContent, latestContent, localContent);
+        const result: DraftUpdatePreview = {
+          draftId: d.id, draftRevision: d.revision, baseVersionId: d.baseVersionId,
+          targetVersionId: s.currentVersionId, baseContent, localContent, latestContent,
+          candidateContent: merged.content, conflicts: merged.conflicts,
+          localDiff: compare(baseContent, localContent), remoteDiff: compare(baseContent, latestContent),
+          confirmationToken: id(),
+        };
+        const snapshot = JSON.stringify(result);
+        db.prepare("INSERT INTO draft_previews VALUES(?,?,?,?,?)").run(result.confirmationToken,
+          actor.teamId, actor.userId, snapshot, digest(result));
+        return result;
+      }),
+    applyDraftUpdate: (actor, input) =>
+      transaction(actor, true, () => {
+        objectInput(input);
+        const d = ownDraft(actor, input.draftId);
+        return replay(actor, "apply_update", input, () => {
+          checkRevision(d.revision, input.expectedRevision);
+          const s = skillGet(actor, d.skillId);
+          if (s.currentVersionId !== input.targetVersionId)
+            fail("STALE_REVISION", "已有新版本，请重新查看更新");
+          nonempty(input.confirmationToken, "更新确认标识");
+          const row = db.prepare("SELECT snapshot,fingerprint FROM draft_previews WHERE token=? AND team=? AND actor=?")
+            .get(input.confirmationToken, actor.teamId, actor.userId);
+          if (!row) fail("STALE_REVISION", "更新预览无效，请重新查看更新");
+          const preview = JSON.parse(row!.snapshot as string) as DraftUpdatePreview;
+          if (digest(preview) !== row!.fingerprint || preview.draftId !== d.id ||
+              preview.draftRevision !== d.revision || preview.baseVersionId !== d.baseVersionId ||
+              preview.targetVersionId !== input.targetVersionId)
+            fail("STALE_REVISION", "更新预览已失效，请重新查看更新");
+          d.content = contentCheck(actor, input.resolvedContent, d.content);
+          d.baseVersionId = input.targetVersionId;
+          d.revision++;
+          d.updatedAt = now();
+          update("drafts", d);
+          options.faultInjector?.("after_draft");
+          audit(actor, "draft.update", d.id, { revision: d.revision, baseVersionId: d.baseVersionId });
+          options.faultInjector?.("after_audit");
+          return d;
         });
       }),
     catalogSnapshot: (actor) =>
