@@ -5,6 +5,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLibraryService } from '../modules/service/index.ts';
 import { createRuntimeService } from '../modules/runtime/index.ts';
 import { createLibraryHttpHandler } from '../modules/broadcast/server.ts';
@@ -74,7 +76,7 @@ async function fixture() {
     })();
     return { events, stop: async () => { controller.abort(); await done; } };
   }
-  return { library, secondWriter, runtime, client, stream, baseUrl, async close() {
+  return { library, secondWriter, runtime, client, stream, baseUrl, databasePath: join(folder, 'library.sqlite'), async close() {
     for (const controller of streams) controller.abort();
     await handler.close();
     server.closeAllConnections();
@@ -127,6 +129,26 @@ test('real publication -> broadcast -> author confirmation -> publication; no re
   await assert.rejects(staleApply, { code: 'STALE_REVISION' });
   const oldRoute = await fetch(`${f.baseUrl}/api/library/mergeProposal`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Skill-Library': '1', Origin: f.baseUrl, Authorization: 'Bearer alice-test-token' }, body: JSON.stringify({ args: [] }) });
   assert.ok(oldRoute.status >= 400);
+});
+
+test('a separate publishing process reaches an already connected SSE client', { timeout: 15000 }, async t => {
+  const f = await fixture(); t.after(() => f.close());
+  const created = await f.library.createSkill(alice, { name: 'External process', description: 'Durable publication log', maintainerIds: [], content: content(body) });
+  const v1 = await f.library.publishDraft(alice, { draftId: created.draft.id, expectedRevision: created.draft.revision, expectedBaseVersionId: null, changeSummary: 'Initial', idempotencyKey: 'initial' });
+  const cursor = (await f.library.listUpdateEvents(alice, 0)).at(-1)!.sequence;
+  const connected = await f.stream('bob-test-token', cursor);
+  const script = `import {createLibraryService} from ${JSON.stringify(new URL('../modules/service/index.ts', import.meta.url).href)};
+    const [databasePath, actorJson, skillId, contentJson] = process.argv.slice(1);
+    const actor = JSON.parse(actorJson), service = createLibraryService({databasePath});
+    const draft = await service.createDraft(actor, skillId);
+    const saved = await service.saveDraft(actor, {draftId:draft.id, expectedRevision:draft.revision, content:JSON.parse(contentJson)});
+    const version = await service.publishDraft(actor, {draftId:saved.id, expectedRevision:saved.revision, expectedBaseVersionId:saved.baseVersionId, changeSummary:'External publication', idempotencyKey:'external'});
+    process.stdout.write(JSON.stringify(version)); service.close();`;
+  const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script, f.databasePath, JSON.stringify(alice), created.skill.id, JSON.stringify(content(body + '\nWritten by another process.\n'))]);
+  const version = JSON.parse(stdout);
+  assert.notEqual(version.id, v1.id);
+  await until(() => connected.events.some(event => event.versionId === version.id));
+  assert.equal(connected.events.filter(event => event.versionId === version.id).length, 1);
 });
 
 test('disconnect replay and changed preview target reject old resolution; running task keeps original resources', { timeout: 15000 }, async t => {
