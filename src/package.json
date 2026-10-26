@@ -1,0 +1,14 @@
+{
+  "name": "skill-library",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test:contracts": "node --experimental-strip-types --test contracts/*.test.ts",
+    "test:service": "npm --prefix modules/service test",
+    "test:runtime": "npm --prefix modules/runtime test",
+    "test:web": "npm --prefix modules/web test",
+    "test": "npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web"
+  }
+}
+

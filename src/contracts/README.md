@@ -1,0 +1,20 @@
+# Shared contract v1
+
+`index.ts` is the frozen first-wave TypeScript boundary. Modules import its types via relative paths. No worker edits this directory without the coordinator's approval. Domain errors carry stable `code`, human-readable Chinese `message`, and optional `details`. Receiving modules validate inputs at runtime.
+
+Service export: `createLibraryService({ databasePath, ...optionalConfig })` returning a `LibraryService` plus a `close()` method. Runtime export: `createRuntimeService({ databasePath, host, ...optionalConfig })` returning a `RuntimeService` plus `close()`. Each module exposes these from its `index.ts` and includes setup/test instructions. SQLite DBs are module-owned in wave 1; integration must validate consistency across catalog capture, preference choice and task acceptance, and tighten the host contract if necessary.
+
+Web exports an application that receives `library: LibraryService`, `runtime: RuntimeService`, and `actor: Actor`. It may ship a clearly labeled in-memory demo adapter inside its owned directory for isolated UX tests. The application must not import service/runtime implementations. Integration owns real HTTP clients and server routing later; do not invent independent REST paths in each worker.
+
+First-wave content supports UTF-8 textual resources. `SKILL.md` is mandatory. Relative resource paths must be normalized and reject traversal and duplicates. Binary resources and genuine Agent execution must be recorded as integration/product gaps, not silently claimed complete. Checksum: SHA-256 of JSON.stringify(files sorted ascending by path, mapped to objects with keys exactly path, content, mediaType in this order). UTF-8 bytes, lowercase hex. File order is not semantic.
+
+Draft semantics: createDraft from no explicit source uses current content and current base. Explicit historical source uses historical content but current base, so restoring history is a new reviewed change. For existing unreleased Skill only its creator/authorized maintainer can obtain its initial draft. Each submission creates an immutable proposal. A new submission of the same draft supersedes its unmerged prior proposal, marking the previous one withdrawn in the same transaction; review and merge of superseded proposals must fail. Draft editing alone never mutates submitted proposal content. This models resubmission without allowing stale approval.
+
+Proposal review: maintainers can review others' proposals, never their own. Preview content is produced by three-way merge; confirmationToken binds exact proposal revision, current version and merged content. mergeProposal must recompute/check these, not trust caller-generated tokens. A stale base with disjoint changes requires a new preview confirmation. Conflicts are resolved by creating a fresh draft based on current with the resolved content, withdrawing the conflicting proposal and submitting a new one for review; v1 does not expose a mutating proposal-resolution endpoint.
+
+No subscriptions. listUpdateEvents is a durable cursor feed for integration's push/reconnect layer, not a notification mailbox. Event sequence is monotonic and actor/team scoped. Version, current pointer, proposal state and event are committed atomically.
+
+Runtime defaults (provisional D1-D3): choice applies to future tasks in that session only; pinned old version remains until unpinned; no choice means latest. A task ID is idempotent and its snapshot immutable, including on recovery. Child tasks inherit the parent snapshot. getSessionUpdates uses actual invocation records plus authoritative host state so dropped events cannot hide changes. setPreference validates the user's viewed target; for latest the target must still be current, otherwise STALE_REVISION; for pinned the target must be an actually used version in that session. Never trust caller-supplied actor for production authentication: integration resolves Actor on the server from the host identity system.
+
+First-wave tests prove module behavior only. Real Agent lifecycle, authenticated transport, cross-module ordering and push latency remain integration acceptance gates.
+
