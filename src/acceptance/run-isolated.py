@@ -16,7 +16,11 @@ root = pathlib.Path(__file__).resolve().parents[2]
 def extract(repo, paths, dest):
     payload = subprocess.check_output(['git', '-C', str(repo), 'archive', '--format=tar', 'HEAD', *paths])
     with tarfile.open(fileobj=io.BytesIO(payload)) as archive:
-        archive.extractall(dest, filter='data')
+        for member in archive.getmembers():
+            path = pathlib.PurePosixPath(member.name)
+            if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+                raise ValueError(f'Unsupported archive member: {member.name}')
+        archive.extractall(dest)
 
 with tempfile.TemporaryDirectory(prefix='skill-v2-acceptance-') as temporary:
     dest = pathlib.Path(temporary)
