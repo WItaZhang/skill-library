@@ -1,4 +1,4 @@
-// Shared contract v1. Runtime validation is each receiving module's responsibility.
+// Shared contract v2: author-managed draft updates and immediate publication.
 export type Id = string;
 export type Role = 'viewer' | 'contributor' | 'admin';
 export interface Actor { userId: Id; teamId: Id; role: Role }
@@ -19,7 +19,7 @@ export interface Skill {
 export interface SkillVersion {
   id: Id; skillId: Id; teamId: Id; number: number; parentVersionId: Id | null;
   content: SkillContent; checksum: string; changeSummary: string;
-  authorId: Id; reviewerId: Id; createdAt: string;
+  authorId: Id; reviewerId: Id | null; approvalMode?: 'automatic' | 'legacy_review'; createdAt: string;
 }
 export interface Draft {
   id: Id; skillId: Id; teamId: Id; authorId: Id; baseVersionId: Id | null;
@@ -48,6 +48,18 @@ export interface AuditEntry {
 export interface CreateSkillInput { name: string; description: string; maintainerIds: Id[]; content: SkillContent }
 export interface SaveDraftInput { draftId: Id; expectedRevision: number; content: SkillContent }
 export interface SubmitInput { draftId: Id; expectedRevision: number; changeSummary: string; idempotencyKey: string }
+export interface PublishDraftInput extends SubmitInput { expectedBaseVersionId: Id | null }
+export interface PreviewDraftUpdateInput { draftId: Id; expectedRevision: number; content: SkillContent }
+export interface DraftUpdatePreview {
+  draftId: Id; draftRevision: number; baseVersionId: Id | null; targetVersionId: Id | null;
+  baseContent: SkillContent; localContent: SkillContent; latestContent: SkillContent;
+  candidateContent: SkillContent; localDiff: FileDiff[]; remoteDiff: FileDiff[];
+  conflicts: MergeConflict[]; confirmationToken: string;
+}
+export interface ApplyDraftUpdateInput {
+  draftId: Id; expectedRevision: number; targetVersionId: Id | null;
+  confirmationToken: string; resolvedContent: SkillContent; idempotencyKey: string;
+}
 export interface ReviewInput { proposalId: Id; expectedRevision: number; action: 'request_changes' | 'reject'; comment: string }
 export interface MergeInput {
   proposalId: Id; expectedRevision: number; expectedCurrentVersionId: Id | null;
@@ -67,19 +79,22 @@ export interface LibraryService {
   createDraft(actor: Actor, skillId: Id, sourceVersionId?: Id): Promise<Draft>;
   getDraft(actor: Actor, draftId: Id): Promise<Draft>;
   saveDraft(actor: Actor, input: SaveDraftInput): Promise<Draft>;
-  submitProposal(actor: Actor, input: SubmitInput): Promise<Proposal>;
-  listProposals(actor: Actor, skillId?: Id): Promise<Proposal[]>;
-  getProposal(actor: Actor, proposalId: Id): Promise<Proposal>;
-  reviewProposal(actor: Actor, input: ReviewInput): Promise<Proposal>;
-  withdrawProposal(actor: Actor, proposalId: Id, expectedRevision: number): Promise<Proposal>;
-  previewMerge(actor: Actor, proposalId: Id): Promise<MergePreview>;
-  mergeProposal(actor: Actor, input: MergeInput): Promise<SkillVersion>;
+  publishDraft(actor: Actor, input: PublishDraftInput): Promise<SkillVersion>;
+  previewDraftUpdate(actor: Actor, input: PreviewDraftUpdateInput): Promise<DraftUpdatePreview>;
+  applyDraftUpdate(actor: Actor, input: ApplyDraftUpdateInput): Promise<Draft>;
   catalogSnapshot(actor: Actor): Promise<CatalogSnapshot>;
   listUpdateEvents(actor: Actor, afterSequence: number): Promise<SkillUpdateEvent[]>;
   listAudit(actor: Actor): Promise<AuditEntry[]>;
 }
 
 export type SessionMode = 'latest' | 'pinned';
+export interface SkillUpdateSource {
+  subscribe(actor: Actor, handlers: {
+    onUpdate: (event: SkillUpdateEvent) => void;
+    onReconnect: () => void;
+    onError?: (error: unknown) => void;
+  }): () => void;
+}
 export interface SessionPreference {
   sessionId: Id; skillId: Id; mode: SessionMode; pinnedVersionId: Id | null; revision: number;
 }
