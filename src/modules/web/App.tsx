@@ -6,10 +6,10 @@ import type {
   Skill,
   SkillVersion,
   FileDiff,
+  SkillUpdateSource,
 } from "../../contracts";
 import { Content, Feedback, LoadState, useAction, useLoad, date } from "./ui";
 import { DraftEditor } from "./DraftEditor";
-import { Reviews } from "./Reviews";
 import { Conversation } from "./Conversation";
 import "./styles.css";
 export interface AppProps {
@@ -17,6 +17,8 @@ export interface AppProps {
   runtime: RuntimeService;
   actor: Actor;
   demo?: boolean;
+  updateSource?: SkillUpdateSource;
+  simulatePublication?: (skillId: string) => Promise<void>;
   initialSessionId?: string;
 }
 export function App({
@@ -25,10 +27,10 @@ export function App({
   actor,
   demo = false,
   initialSessionId,
+  updateSource,
+  simulatePublication,
 }: AppProps) {
-  const [section, setSection] = useState<
-    "library" | "reviews" | "conversation"
-  >("library");
+  const [section, setSection] = useState<"library" | "conversation">("library");
   const [query, setQuery] = useState(""),
     [selected, setSelected] = useState<Skill>();
   const [editing, setEditing] = useState<{ skill: Skill; source?: string }>();
@@ -79,7 +81,6 @@ export function App({
           {(
             [
               ["library", "技能库", "▦"],
-              ["reviews", "修改评审", "◈"],
               ["conversation", "会话与任务", "◷"],
             ] as const
           ).map(([id, label, icon]) => (
@@ -123,12 +124,7 @@ export function App({
             团队工作空间{" "}
             <span className="muted">
               {" "}
-              /{" "}
-              {section === "library"
-                ? "技能库"
-                : section === "reviews"
-                  ? "修改评审"
-                  : "会话与任务"}
+              / {section === "library" ? "技能库" : "会话与任务"}
             </span>
           </span>
           <span className="badge">
@@ -140,7 +136,7 @@ export function App({
           {demo && (
             <p className="demo-note">
               演示环境：刷新即重置，不连接真实身份或
-              Agent。可以编辑、评审并体验版本选择。
+              Agent。可以编辑、自动生效并体验版本选择。
             </p>
           )}
           {section === "library" && (
@@ -188,7 +184,7 @@ export function App({
                             {skill.description}
                           </span>
                           <span className="card-meta">
-                            {skill.currentVersionId ? "已生效" : "待首次评审"} ·{" "}
+                            {skill.currentVersionId ? "已生效" : "待首次生效"} ·{" "}
                             {skill.maintainerIds.length} 位维护者
                           </span>
                         </span>
@@ -199,17 +195,25 @@ export function App({
                   <div className="detail">
                     {editing ? (
                       <DraftEditor
+                        key={`${actor.teamId}:${actor.userId}:${actor.role}:${editing.skill.id}:${editing.source || "current"}`}
                         library={library}
                         actor={actor}
+                        updateSource={updateSource}
+                        simulatePublication={
+                          demo ? simulatePublication : undefined
+                        }
                         skill={editing.skill}
                         source={editing.source}
                         onDirty={setDirty}
                         onSubmitted={() => {
                           setDirty(false);
                           setEditing(undefined);
-                          setSection("reviews");
+                          catalog.reload();
                         }}
-                        onClose={() => setEditing(undefined)}
+                        onClose={() => {
+                          setEditing(undefined);
+                          catalog.reload();
+                        }}
                       />
                     ) : selected ? (
                       <SkillDetail
@@ -231,7 +235,7 @@ export function App({
                           选择左侧技能，查看使用说明、版本历史与团队的改进记录。
                         </p>
                         <div className="rule">
-                          独立修改 · 维护者评审 · 任务版本固定
+                          独立修改 · 自动生效 · 任务版本固定
                         </div>
                       </div>
                     )}
@@ -239,9 +243,6 @@ export function App({
                 </div>
               </LoadState>
             </>
-          )}
-          {section === "reviews" && (
-            <Reviews library={library} actor={actor} onDirty={setDirty} />
           )}
           {section === "conversation" && (
             <Conversation
@@ -290,9 +291,11 @@ function SkillDetail({
     [after, setAfter] = useState(""),
     [diff, setDiff] = useState<FileDiff[]>();
   const action = useAction();
-  const current =
-    versions.data?.find((v) => v.id === skill.currentVersionId) ??
-    versions.data?.[0];
+  const current = versions.data?.reduce<SkillVersion | undefined>(
+    (latest, version) =>
+      !latest || version.number > latest.number ? version : latest,
+    undefined,
+  );
   return (
     <>
       <div className="detail-heading">
@@ -309,7 +312,13 @@ function SkillDetail({
           >
             使用此技能 <span aria-hidden>↗</span>
           </button>
-          <button onClick={() => onEdit()} disabled={actor.role === "viewer"}>
+          <button
+            onClick={() => onEdit()}
+            disabled={
+              actor.role === "viewer" &&
+              !skill.maintainerIds.includes(actor.userId)
+            }
+          >
             修改
           </button>
         </div>
@@ -336,14 +345,12 @@ function SkillDetail({
           current ? (
             <Content files={current.content.files} />
           ) : (
-            <p className="empty">
-              尚无正式版本，请先提交修改并交由另一位维护者评审。
-            </p>
+            <p className="empty">尚无正式版本，请先提交并生效。</p>
           )
         ) : (
           <>
             <p className="muted">
-              历史不可改写。恢复内容会创建新的独立草稿，并再次评审。
+              历史不可改写。恢复内容会创建新的独立草稿，并重新提交生效。
             </p>
             <div className="timeline">
               {versions.data?.map((v) => (
@@ -356,15 +363,20 @@ function SkillDetail({
                   </div>
                   <p>{v.changeSummary}</p>
                   <small>
-                    {date(v.createdAt)} · 作者 {v.authorId} · 评审{" "}
-                    {v.reviewerId}
+                    {date(v.createdAt)} · 作者 {v.authorId} ·{" "}
+                    {v.reviewerId === null
+                      ? "自动生效"
+                      : `历史评审 ${v.reviewerId}`}
                   </small>
                   <div className="actions">
                     <button onClick={() => setViewed(v)}>
                       查看 v{v.number}
                     </button>
                     <button
-                      disabled={actor.role === "viewer"}
+                      disabled={
+                        actor.role === "viewer" &&
+                        !skill.maintainerIds.includes(actor.userId)
+                      }
                       onClick={() => onEdit(v.id)}
                     >
                       恢复 v{v.number} 为草稿

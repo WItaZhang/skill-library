@@ -5,8 +5,10 @@ import {
   type Draft,
   type Invocation,
   type LibraryService,
-  type MergePreview,
-  type Proposal,
+  type DraftUpdatePreview,
+  type SkillUpdateEvent,
+  type SkillUpdateSource,
+  type FileDiff,
   type RuntimeService,
   type SessionPreference,
   type Skill,
@@ -86,36 +88,7 @@ export async function createDemo() {
         createdAt: `2026-10-${20 + n}T08:00:00Z`,
       });
     }
-  const drafts: Draft[] = [],
-    proposals: Proposal[] = [
-      {
-        id: "proposal-review",
-        skillId: "weekly",
-        teamId: "demo-team",
-        authorId: "lin",
-        baseVersionId: "weekly-v2",
-        revision: 1,
-        content: body(
-          versions.find((v) => v.id === "weekly-v2")!.content.files[0].content +
-            "\n## 输出格式\n本周进展 / 风险 / 下周计划\n",
-        ),
-        changeSummary: "让周报输出更容易扫描",
-        status: "pending",
-        createdAt: now(),
-      },
-      {
-        id: "proposal-conflict",
-        skillId: "research",
-        teamId: "demo-team",
-        authorId: "qianqian",
-        baseVersionId: "research-v1",
-        revision: 1,
-        content: body("# 深度研究助手\n\n先列出三个关键问题，再逐条研究。\n"),
-        changeSummary: "调整研究步骤（含冲突演示）",
-        status: "pending",
-        createdAt: now(),
-      },
-    ];
+  const drafts: Draft[] = [];
   const sessions = new Set(["demo-session"]),
     preferences: SessionPreference[] = [],
     tasks: TaskSnapshot[] = [
@@ -141,7 +114,23 @@ export async function createDemo() {
     },
   ];
   const receipts = new Map<string, unknown>(),
-    previews = new Map<string, MergePreview>();
+    previews = new Map<string, DraftUpdatePreview>();
+  const events: SkillUpdateEvent[] = [];
+  const listeners = new Set<{
+    actor: Actor;
+    handlers: Parameters<SkillUpdateSource["subscribe"]>[1];
+  }>();
+  const updateSource: SkillUpdateSource = {
+    subscribe(actor, handlers) {
+      access(actor);
+      const listener = { actor, handlers };
+      listeners.add(listener);
+      handlers.onReconnect();
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
   const access = (actor: Actor) => {
     if (actor.teamId !== "demo-team")
       throw new DomainError("FORBIDDEN", "演示仅包含演示团队。");
@@ -151,13 +140,16 @@ export async function createDemo() {
     if (!found) throw new DomainError("NOT_FOUND", "找不到此记录。");
     return found;
   };
-  const edit = (a: Actor) => {
+  const edit = (a: Actor, skillId?: string) => {
     access(a);
-    if (a.role === "viewer")
+    if (
+      a.role === "viewer" &&
+      (!skillId || !find(skills, skillId).maintainerIds.includes(a.userId))
+    )
       throw new DomainError("FORBIDDEN", "需要贡献者权限。");
   };
   const owned = (a: Actor, d: Draft) => {
-    edit(a);
+    edit(a, d.skillId);
     if (d.authorId !== a.userId)
       throw new DomainError("FORBIDDEN", "只能编辑自己的草稿。");
   };
@@ -165,19 +157,10 @@ export async function createDemo() {
     if (actual !== expected)
       throw new DomainError("STALE_REVISION", "修订已更新。");
   };
-  const review = (a: Actor, p: Proposal) => {
-    access(a);
+  const validate = (c: SkillContent, strict = true) => {
     if (
-      p.authorId === a.userId ||
-      !find(skills, p.skillId).maintainerIds.includes(a.userId)
-    )
-      throw new DomainError("FORBIDDEN", "必须由另一位维护者评审。");
-    if (p.status !== "pending")
-      throw new DomainError("STALE_REVISION", "提案已结束。");
-  };
-  const validate = (c: SkillContent) => {
-    if (
-      !c.files.some((f) => f.path === "SKILL.md" && f.content.trim()) ||
+      (strict &&
+        !c.files.some((f) => f.path === "SKILL.md" && f.content.trim())) ||
       new Set(c.files.map((f) => f.path)).size !== c.files.length ||
       c.files.some(
         (f) =>
@@ -270,7 +253,7 @@ export async function createDemo() {
       });
     },
     async createDraft(a, s, source) {
-      edit(a);
+      edit(a, s);
       const skill = find(skills, s);
       const draft: Draft = {
         id: id("draft"),
@@ -297,105 +280,131 @@ export async function createDemo() {
       const d = find(drafts, input.draftId);
       owned(a, d);
       revision(d.revision, input.expectedRevision);
-      validate(input.content);
+      validate(input.content, false);
       d.content = copy(input.content);
       d.revision++;
       d.updatedAt = now();
       return copy(d);
     },
-    async submitProposal(a, input) {
-      if (receipts.has(input.idempotencyKey))
-        return copy(receipts.get(input.idempotencyKey) as Proposal);
+    async publishDraft(a, input) {
+      const d = find(drafts, input.draftId);
+      owned(a, d);
+      const receiptKey = `${a.userId}:publish:${input.idempotencyKey}`;
+      const existing = receipts.get(receiptKey) as
+        { input: unknown; value: SkillVersion } | undefined;
+      if (existing) {
+        if (!equal(existing.input, input))
+          throw new DomainError("CONFLICT", "幂等键内容不同。");
+        return copy(existing.value);
+      }
+      revision(d.revision, input.expectedRevision);
+      const s = find(skills, d.skillId);
+      if (
+        d.baseVersionId !== s.currentVersionId ||
+        input.expectedBaseVersionId !== d.baseVersionId
+      )
+        throw new DomainError("STALE_REVISION", "请先确认同步新版。");
+      validate(d.content);
+      if (!input.changeSummary.trim())
+        throw new DomainError("VALIDATION", "请填写修改说明。");
+      const digest = await checksum(d.content);
+      // The demo also rechecks after the asynchronous digest.
+      revision(d.revision, input.expectedRevision);
+      if (s.currentVersionId !== d.baseVersionId)
+        throw new DomainError("STALE_REVISION", "新版已生效。");
+      const v: SkillVersion = {
+        id: id("version"),
+        skillId: s.id,
+        teamId: a.teamId,
+        number: versions.filter((v) => v.skillId === s.id).length + 1,
+        parentVersionId: s.currentVersionId,
+        content: copy(d.content),
+        checksum: digest,
+        changeSummary: input.changeSummary,
+        authorId: a.userId,
+        reviewerId: null,
+        approvalMode: "automatic",
+        createdAt: now(),
+      };
+      versions.push(v);
+      s.currentVersionId = v.id;
+      d.baseVersionId = v.id;
+      d.revision++;
+      d.updatedAt = now();
+      receipts.set(receiptKey, { input: copy(input), value: copy(v) });
+      const event: SkillUpdateEvent = {
+        id: id("event"),
+        sequence: events.length + 1,
+        teamId: a.teamId,
+        skillId: s.id,
+        previousVersionId: v.parentVersionId,
+        versionId: v.id,
+        createdAt: now(),
+      };
+      events.push(event);
+      for (const listener of listeners)
+        if (listener.actor.teamId === a.teamId)
+          listener.handlers.onUpdate(copy(event));
+      return copy(v);
+    },
+    async previewDraftUpdate(a, input) {
       const d = find(drafts, input.draftId);
       owned(a, d);
       revision(d.revision, input.expectedRevision);
-      validate(d.content);
-      if (
-        !input.changeSummary.trim() ||
-        (d.baseVersionId &&
-          equal(d.content, find(versions, d.baseVersionId).content))
-      )
-        throw new DomainError(
-          "VALIDATION",
-          "请填写修改说明，并确保内容有变化。",
-        );
-      for (const p of proposals)
-        if (
-          (p as Proposal & { draftId?: string }).draftId === d.id &&
-          !["merged", "withdrawn"].includes(p.status)
-        )
-          p.status = "withdrawn";
-      const p: Proposal & { draftId: string } = {
-        ...copy(d),
-        id: id("proposal"),
+      validate(input.content, false);
+      const s = find(skills, d.skillId);
+      const baseContent = d.baseVersionId
+        ? find(versions, d.baseVersionId).content
+        : { files: [] };
+      const latestContent = s.currentVersionId
+        ? find(versions, s.currentVersionId).content
+        : { files: [] };
+      const diff = (before: SkillContent, after: SkillContent): FileDiff[] =>
+        [
+          ...new Set([...before.files, ...after.files].map((f) => f.path)),
+        ].flatMap((path) => {
+          const b = before.files.find((f) => f.path === path)?.content,
+            c = after.files.find((f) => f.path === path)?.content;
+          return b === c
+            ? []
+            : [
+                {
+                  path,
+                  before: b,
+                  after: c,
+                  kind:
+                    b === undefined
+                      ? "added"
+                      : c === undefined
+                        ? "removed"
+                        : "modified",
+                },
+              ];
+        });
+      const preview: DraftUpdatePreview = {
         draftId: d.id,
-        changeSummary: input.changeSummary,
-        status: "pending",
-        createdAt: now(),
-      };
-      proposals.unshift(p);
-      receipts.set(input.idempotencyKey, p);
-      return copy(p);
-    },
-    async listProposals(a, s) {
-      access(a);
-      return copy(proposals.filter((p) => !s || p.skillId === s));
-    },
-    async getProposal(a, p) {
-      access(a);
-      return copy(find(proposals, p));
-    },
-    async reviewProposal(a, input) {
-      const p = find(proposals, input.proposalId);
-      review(a, p);
-      revision(p.revision, input.expectedRevision);
-      p.status = input.action === "reject" ? "rejected" : "changes_requested";
-      p.reviewComment = input.comment;
-      return copy(p);
-    },
-    async withdrawProposal(a, pid, expected) {
-      const p = find(proposals, pid);
-      access(a);
-      if (p.authorId !== a.userId || p.status === "merged")
-        throw new DomainError("FORBIDDEN", "只能撤回自己的未生效修改。");
-      revision(p.revision, expected);
-      p.status = "withdrawn";
-      return copy(p);
-    },
-    async previewMerge(a, pid) {
-      access(a);
-      const target = find(proposals, pid);
-      if (
-        !["pending", "changes_requested", "conflicted"].includes(target.status)
-      )
-        throw new DomainError("STALE_REVISION", "提案已结束。");
-      if (
-        target.authorId !== a.userId &&
-        !find(skills, target.skillId).maintainerIds.includes(a.userId)
-      )
-        throw new DomainError("FORBIDDEN", "只有作者或维护者可以预览合并。");
-      const p = find(proposals, pid),
-        s = find(skills, p.skillId);
-      const base = p.baseVersionId
-          ? find(versions, p.baseVersionId).content.files
-          : [],
-        current = s.currentVersionId
-          ? find(versions, s.currentVersionId).content.files
-          : [];
-      const preview: MergePreview = {
-        proposalId: pid,
-        proposalRevision: p.revision,
-        currentVersionId: s.currentVersionId,
-        content: { files: [] },
+        draftRevision: d.revision,
+        baseVersionId: d.baseVersionId,
+        targetVersionId: s.currentVersionId,
+        baseContent: copy(baseContent),
+        latestContent: copy(latestContent),
+        localContent: copy(input.content),
+        candidateContent: { files: [] },
+        localDiff: diff(baseContent, input.content),
+        remoteDiff: diff(baseContent, latestContent),
         conflicts: [],
         confirmationToken: id("preview"),
       };
       for (const path of new Set(
-        [...base, ...current, ...p.content.files].map((f) => f.path),
+        [
+          ...baseContent.files,
+          ...latestContent.files,
+          ...input.content.files,
+        ].map((f) => f.path),
       )) {
-        const b = base.find((f) => f.path === path),
-          c = current.find((f) => f.path === path),
-          mine = p.content.files.find((f) => f.path === path);
+        const b = baseContent.files.find((f) => f.path === path),
+          c = latestContent.files.find((f) => f.path === path),
+          mine = input.content.files.find((f) => f.path === path);
         if (!equal(b, c) && !equal(b, mine) && !equal(c, mine))
           preview.conflicts.push({
             path,
@@ -404,49 +413,41 @@ export async function createDemo() {
             proposed: mine?.content,
           });
         const chosen = equal(b, mine) ? c : mine;
-        if (chosen) preview.content.files.push(copy(chosen));
+        if (chosen) preview.candidateContent.files.push(copy(chosen));
       }
       previews.set(preview.confirmationToken, copy(preview));
-      return preview;
+      return copy(preview);
     },
-    async mergeProposal(a, input) {
-      if (receipts.has(input.idempotencyKey))
-        return copy(receipts.get(input.idempotencyKey) as SkillVersion);
-      const p = find(proposals, input.proposalId);
-      review(a, p);
-      revision(p.revision, input.expectedRevision);
-      const s = find(skills, p.skillId),
-        preview = previews.get(input.confirmationToken);
+    async applyDraftUpdate(a, input) {
+      const d = find(drafts, input.draftId);
+      owned(a, d);
+      const receiptKey = `${a.userId}:apply:${input.idempotencyKey}`;
+      const existing = receipts.get(receiptKey) as
+        { input: unknown; value: Draft } | undefined;
+      if (existing) {
+        if (!equal(existing.input, input))
+          throw new DomainError("CONFLICT", "幂等键内容不同。");
+        return copy(existing.value);
+      }
+      revision(d.revision, input.expectedRevision);
+      const p = previews.get(input.confirmationToken),
+        s = find(skills, d.skillId);
       if (
-        !preview ||
-        preview.proposalId !== p.id ||
-        preview.proposalRevision !== p.revision ||
-        s.currentVersionId !== input.expectedCurrentVersionId ||
-        preview.currentVersionId !== s.currentVersionId
+        !p ||
+        p.draftId !== d.id ||
+        p.draftRevision !== d.revision ||
+        p.baseVersionId !== d.baseVersionId ||
+        p.targetVersionId !== s.currentVersionId ||
+        input.targetVersionId !== s.currentVersionId
       )
         throw new DomainError("STALE_REVISION", "请重新比较并确认。");
-      if (preview.conflicts.length)
-        throw new DomainError("CONFLICT", "仍有内容冲突。");
-      validate(preview.content);
-      const v: SkillVersion = {
-        id: id("version"),
-        skillId: s.id,
-        teamId: a.teamId,
-        number: versions.filter((v) => v.skillId === s.id).length + 1,
-        parentVersionId: s.currentVersionId,
-        content: copy(preview.content),
-        checksum: await checksum(preview.content),
-        changeSummary: p.changeSummary,
-        authorId: p.authorId,
-        reviewerId: a.userId,
-        createdAt: now(),
-      };
-      versions.push(v);
-      s.currentVersionId = v.id;
-      p.status = "merged";
-      p.mergedVersionId = v.id;
-      receipts.set(input.idempotencyKey, v);
-      return copy(v);
+      validate(input.resolvedContent, false);
+      d.content = copy(input.resolvedContent);
+      d.baseVersionId = p.targetVersionId;
+      d.revision++;
+      d.updatedAt = now();
+      receipts.set(receiptKey, { input: copy(input), value: copy(d) });
+      return copy(d);
     },
     async catalogSnapshot(a) {
       access(a);
@@ -460,9 +461,9 @@ export async function createDemo() {
         capturedAt: now(),
       };
     },
-    async listUpdateEvents(a) {
+    async listUpdateEvents(a, after) {
       access(a);
-      return [];
+      return copy(events.filter((e) => e.sequence > after));
     },
     async listAudit(a) {
       access(a);
@@ -613,5 +614,41 @@ export async function createDemo() {
       return copy(p);
     },
   };
-  return { library, runtime, actor: demoActor, sessionId: "demo-session" };
+  async function simulatePublication(skillId: string) {
+    const author: Actor = {
+      ...demoActor,
+      userId: "another-demo-author",
+      role: "contributor",
+    };
+    const d = await library.createDraft(author, skillId);
+    const next = await library.saveDraft(author, {
+      draftId: d.id,
+      expectedRevision: d.revision,
+      content: {
+        files: [
+          ...d.content.files,
+          {
+            path: `references/demo-${serial}.md`,
+            content: "另一作者新增的演示说明",
+            mediaType: "text/markdown",
+          },
+        ],
+      },
+    });
+    await library.publishDraft(author, {
+      draftId: next.id,
+      expectedRevision: next.revision,
+      expectedBaseVersionId: next.baseVersionId,
+      changeSummary: "另一作者发布（本地演示）",
+      idempotencyKey: id("publish"),
+    });
+  }
+  return {
+    library,
+    runtime,
+    actor: demoActor,
+    sessionId: "demo-session",
+    updateSource,
+    simulatePublication,
+  };
 }

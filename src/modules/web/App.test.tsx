@@ -1,13 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
-import { DomainError } from "../../contracts";
+import { DomainError, type SkillUpdateSource } from "../../contracts";
 import { App } from "./App";
 import { createDemo } from "./demo";
 import { DraftEditor } from "./DraftEditor";
 import { Conversation } from "./Conversation";
-import { Reviews } from "./Reviews";
 beforeEach(() => {
   sessionStorage.clear();
   vi.stubGlobal("crypto", webcrypto);
@@ -92,13 +91,13 @@ describe("草稿保护", () => {
   });
   it("未保存时禁止提交，保存后提交固定修订和修改说明", async () => {
     const { library, user, input, actor } = await editor();
-    const submit = vi.spyOn(library, "submitProposal");
+    const submit = vi.spyOn(library, "publishDraft");
     await user.type(input, "\n新的指南");
     await user.type(screen.getByLabelText("修改说明"), "补充指南");
-    expect(screen.getByRole("button", { name: "提交修改" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "提交并生效" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "保存草稿" }));
     await screen.findByText("草稿已保存");
-    await user.click(screen.getByRole("button", { name: "提交修改" }));
+    await user.click(screen.getByRole("button", { name: "提交并生效" }));
     expect(submit).toHaveBeenCalledWith(
       actor,
       expect.objectContaining({
@@ -107,85 +106,6 @@ describe("草稿保护", () => {
         idempotencyKey: expect.any(String),
       }),
     );
-  });
-});
-describe("评审与冲突", () => {
-  it("作者即使是管理员也不能自审", async () => {
-    const demo = await createDemo(),
-      user = userEvent.setup();
-    const review = vi.spyOn(demo.library, "mergeProposal");
-    render(<Reviews {...demo} onDirty={() => {}} />);
-    await user.click(
-      await screen.findByRole("button", { name: /调整研究步骤/ }),
-    );
-    expect(
-      await screen.findByText(/作者不能评审自己的提案/),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "批准并生效" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "请求修改" })).toBeDisabled();
-    expect(review).not.toHaveBeenCalled();
-  });
-  it("作者看到三方冲突并以解决结果创建新草稿", async () => {
-    const demo = await createDemo(),
-      user = userEvent.setup();
-    const withdraw = vi.spyOn(demo.library, "withdrawProposal"),
-      create = vi.spyOn(demo.library, "createDraft");
-    render(<Reviews {...demo} onDirty={() => {}} />);
-    await user.click(
-      await screen.findByRole("button", { name: /调整研究步骤/ }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "重新比较并预览合并" }),
-    );
-    expect(
-      await screen.findByRole("heading", { name: "解决修改冲突" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("最新内容")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "采用我的修改" }));
-    await user.click(
-      screen.getByRole("button", { name: "以解决结果创建新草稿" }),
-    );
-    expect(
-      await screen.findByRole("heading", { name: "修改 · 深度研究助手" }),
-    ).toBeInTheDocument();
-    expect(create).toHaveBeenCalledWith(demo.actor, "research");
-    expect(withdraw).toHaveBeenCalledWith(demo.actor, "proposal-conflict", 1);
-    expect(await screen.findByLabelText("SKILL.md")).toHaveValue(
-      "# 深度研究助手\n\n先列出三个关键问题，再逐条研究。\n",
-    );
-    expect(screen.getByRole("button", { name: "提交修改" })).toBeDisabled();
-  });
-  it("非作者维护者必须确认合并预览，批准使用服务令牌", async () => {
-    const demo = await createDemo(),
-      user = userEvent.setup();
-    const merge = vi.spyOn(demo.library, "mergeProposal");
-    render(<Reviews {...demo} onDirty={() => {}} />);
-    await user.click(
-      await screen.findByRole("button", { name: /让周报输出更容易扫描/ }),
-    );
-    await screen.findByRole("heading", { name: "让周报输出更容易扫描" });
-    expect(screen.getByRole("button", { name: "批准并生效" })).toBeDisabled();
-    await user.click(
-      screen.getByRole("button", { name: "重新比较并预览合并" }),
-    );
-    await user.click(
-      await screen.findByLabelText("我已检查最终内容，确认本次生效"),
-    );
-    await user.click(screen.getByRole("button", { name: "批准并生效" }));
-    await waitFor(() =>
-      expect(merge).toHaveBeenCalledWith(
-        demo.actor,
-        expect.objectContaining({
-          proposalId: "proposal-review",
-          expectedRevision: 1,
-          expectedCurrentVersionId: "weekly-v2",
-          confirmationToken: expect.stringMatching(/^preview-/),
-        }),
-      ),
-    );
-    expect(
-      (await demo.library.listVersions(demo.actor, "weekly"))[0].number,
-    ).toBe(3);
   });
 });
 describe("会话更新", () => {
@@ -312,137 +232,10 @@ it("加载失败有重试入口，重试后的空态清楚可见", async () => {
   expect(await screen.findByText(/没有找到技能/)).toBeInTheDocument();
 });
 
-it("冲突解决期间最新基线变化时拒绝保存，保留解决输入", async () => {
-  const demo = await createDemo(),
-    user = userEvent.setup();
-  const create = demo.library.createDraft.bind(demo.library);
-  vi.spyOn(demo.library, "createDraft").mockImplementation(async (a, s) => ({
-    ...(await create(a, s)),
-    baseVersionId: "newer-version",
-  }));
-  const save = vi.spyOn(demo.library, "saveDraft"),
-    withdraw = vi.spyOn(demo.library, "withdrawProposal");
-  render(<Reviews {...demo} onDirty={() => {}} />);
-  await user.click(await screen.findByRole("button", { name: /调整研究步骤/ }));
-  await user.click(
-    await screen.findByRole("button", { name: "重新比较并预览合并" }),
-  );
-  const input = await screen.findByLabelText("解决结果 · SKILL.md");
-  await user.type(input, "# 手动解决的内容");
-  await user.click(
-    screen.getByRole("button", { name: "以解决结果创建新草稿" }),
-  );
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "最新内容再次变化",
-  );
-  expect(input).toHaveValue("# 手动解决的内容");
-  expect(save).not.toHaveBeenCalled();
-  expect(withdraw).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "重新比较并预览合并" }));
-  expect(await screen.findByLabelText("解决结果 · SKILL.md")).toHaveValue(
-    "# 手动解决的内容",
-  );
-});
-it("冲突中采用不存在的最新版资源表示删除，不创建空文件", async () => {
-  const demo = await createDemo(),
-    user = userEvent.setup();
-  const version = await demo.library.getVersion(demo.actor, "research-v2");
-  vi.spyOn(demo.library, "previewMerge").mockResolvedValue({
-    proposalId: "proposal-conflict",
-    proposalRevision: 1,
-    currentVersionId: "research-v2",
-    confirmationToken: "preview-delete",
-    content: version.content,
-    conflicts: [
-      {
-        path: "references/guide.md",
-        base: "old",
-        current: undefined,
-        proposed: "my change",
-      },
-    ],
-  });
-  const save = vi.spyOn(demo.library, "saveDraft");
-  render(<Reviews {...demo} onDirty={() => {}} />);
-  await user.click(await screen.findByRole("button", { name: /调整研究步骤/ }));
-  await user.click(
-    await screen.findByRole("button", { name: "重新比较并预览合并" }),
-  );
-  await user.click(await screen.findByRole("button", { name: "采用最新内容" }));
-  expect(screen.getByText("解决结果：删除此资源")).toBeInTheDocument();
-  await user.click(
-    screen.getByRole("button", { name: "以解决结果创建新草稿" }),
-  );
-  await screen.findByRole("heading", { name: "修改 · 深度研究助手" });
-  expect(save.mock.calls[0][1].content.files.map((f) => f.path)).toEqual([
-    "SKILL.md",
-  ]);
-});
-it("请求修改后作者可调整并重新提交无冲突的提案", async () => {
-  const demo = await createDemo(),
-    user = userEvent.setup();
-  await demo.library.reviewProposal(demo.actor, {
-    proposalId: "proposal-review",
-    expectedRevision: 1,
-    action: "request_changes",
-    comment: "补充风险负责人",
-  });
-  const author = { ...demo.actor, userId: "lin" };
-  const submit = vi.spyOn(demo.library, "submitProposal");
-  render(<Reviews library={demo.library} actor={author} onDirty={() => {}} />);
-  await user.click(
-    await screen.findByRole("button", { name: /让周报输出更容易扫描/ }),
-  );
-  await user.click(
-    await screen.findByRole("button", { name: "重新比较并预览合并" }),
-  );
-  await user.click(
-    await screen.findByRole("button", { name: "继续修改并重新提交" }),
-  );
-  const input = await screen.findByLabelText("SKILL.md");
-  await user.type(input, "\n每项风险标注负责人。");
-  await user.type(screen.getByLabelText("修改说明"), "补充风险负责人");
-  await user.click(screen.getByRole("button", { name: "保存草稿" }));
-  await screen.findByText("草稿已保存");
-  await user.click(screen.getByRole("button", { name: "提交修改" }));
-  expect(submit).toHaveBeenCalledWith(
-    author,
-    expect.objectContaining({
-      changeSummary: "补充风险负责人",
-      expectedRevision: 3,
-    }),
-  );
-  expect(
-    (await demo.library.getProposal(author, "proposal-review")).status,
-  ).toBe("withdrawn");
-  expect((await demo.library.listProposals(author))[0].status).toBe("pending");
-});
 it("没有内容变化时不能提交", async () => {
   const { user } = await editor();
   await user.type(screen.getByLabelText("修改说明"), "仅说明，没有改内容");
-  expect(screen.getByRole("button", { name: "提交修改" })).toBeDisabled();
-});
-
-it("请求修改状态可以比较但维护者不能直接批准", async () => {
-  const demo = await createDemo(),
-    user = userEvent.setup();
-  await demo.library.reviewProposal(demo.actor, {
-    proposalId: "proposal-review",
-    expectedRevision: 1,
-    action: "request_changes",
-    comment: "请调整",
-  });
-  render(<Reviews {...demo} onDirty={() => {}} />);
-  await user.click(
-    await screen.findByRole("button", { name: /让周报输出更容易扫描/ }),
-  );
-  await user.click(
-    await screen.findByRole("button", { name: "重新比较并预览合并" }),
-  );
-  await user.click(
-    await screen.findByLabelText("我已检查最终内容，确认本次生效"),
-  );
-  expect(screen.getByRole("button", { name: "批准并生效" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "提交并生效" })).toBeDisabled();
 });
 
 it("停止编辑后自动保存并保留最后成功保存内容", async () => {
@@ -454,4 +247,420 @@ it("停止编辑后自动保存并保留最后成功保存内容", async () => {
     (await library.getDraft(actor, draft.id)).content.files[0].content,
   ).toContain("自动保存的段落");
   expect(await screen.findByText("草稿已保存")).toBeInTheDocument();
+});
+
+it("广播保留脏输入，无重叠也必须确认，随后独立自动生效", async () => {
+  const { library, actor, user, input, draft, simulatePublication } =
+    await editor();
+  await user.type(input, "\n本地未保存");
+  const before = (input as HTMLTextAreaElement).value;
+  await simulatePublication("research");
+  expect(await screen.findByText(/此技能已有新版本/)).toBeInTheDocument();
+  expect(input).toHaveValue(before);
+  expect((await library.getDraft(actor, draft.id)).baseVersionId).toBe(
+    "research-v2",
+  );
+  const preview = vi.spyOn(library, "previewDraftUpdate");
+  await user.click(screen.getByRole("button", { name: "重新比较并查看更新" }));
+  expect(await screen.findByText(/没有重叠修改/)).toBeInTheDocument();
+  expect(preview.mock.calls[0][1].content.files[0].content).toBe(before);
+  expect(screen.getByRole("button", { name: "确认同步草稿" })).toBeDisabled();
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await waitFor(() =>
+    expect(screen.queryByText(/此技能已有新版本/)).not.toBeInTheDocument(),
+  );
+  expect(input).toHaveValue(before);
+  await user.type(screen.getByLabelText("修改说明"), "我的改进");
+  await user.click(screen.getByRole("button", { name: "提交并生效" }));
+  expect(await screen.findByText("v4 已自动生效")).toBeInTheDocument();
+  const v = (await library.listVersions(actor, "research"))[0];
+  expect(v.reviewerId).toBeNull();
+  expect(v.approvalMode).toBe("automatic");
+  expect(await library.listUpdateEvents(actor, 0)).toHaveLength(2);
+});
+
+it("预览后继续输入使旧预览失效，刷新包含最新输入", async () => {
+  const { user, input, simulatePublication } = await editor();
+  await simulatePublication("research");
+  await user.click(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  );
+  await screen.findByText(/没有重叠修改/);
+  await user.type(input, "\n预览后的输入");
+  expect(screen.getByRole("button", { name: "确认同步草稿" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "重新比较并查看更新" }));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("region", { name: "作者更新处理" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect((input as HTMLTextAreaElement).value).toContain("预览后的输入");
+});
+
+it("保存请求期间仍可输入，预览等待保存，旧响应不覆盖输入", async () => {
+  const { library, user, input, simulatePublication } = await editor();
+  const original = library.saveDraft.bind(library);
+  let finish!: () => void;
+  vi.spyOn(library, "saveDraft").mockImplementationOnce(async (a, i) => {
+    await new Promise<void>((r) => {
+      finish = r;
+    });
+    return original(a, i);
+  });
+  await user.type(input, "\n保存快照");
+  await user.click(screen.getByRole("button", { name: "保存草稿" }));
+  await user.type(input, "\n请求期间继续输入");
+  await simulatePublication("research");
+  expect(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  ).toBeDisabled();
+  finish();
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "重新比较并查看更新" }),
+    ).toBeEnabled(),
+  );
+  expect((input as HTMLTextAreaElement).value).toContain("请求期间继续输入");
+  expect(screen.getByText("有未保存的修改")).toBeInTheDocument();
+});
+
+it("应用请求期间的新输入保留为脏内容，自动保存不抢先写入", async () => {
+  const { library, user, input, simulatePublication } = await editor();
+  await simulatePublication("research");
+  await user.click(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  const original = library.applyDraftUpdate.bind(library);
+  let finish!: () => void;
+  vi.spyOn(library, "applyDraftUpdate").mockImplementationOnce(async (a, i) => {
+    await new Promise<void>((r) => {
+      finish = r;
+    });
+    return original(a, i);
+  });
+  const save = vi.spyOn(library, "saveDraft");
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await user.type(input, "\n应用期间输入");
+  await new Promise((r) => setTimeout(r, 1900));
+  expect(save).not.toHaveBeenCalled();
+  finish();
+  await screen.findByText(/请求期间的新输入仍保留/);
+  await new Promise((r) => setTimeout(r, 1900));
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "保存草稿" })).toBeDisabled();
+  expect(
+    screen.getByRole("region", { name: "同步期间输入恢复" }),
+  ).toHaveTextContent("另一作者新增的演示说明");
+  expect((input as HTMLTextAreaElement).value).toContain("应用期间输入");
+  expect(screen.getByText("有未保存的修改")).toBeInTheDocument();
+});
+
+it("发布响应丢失后以原请求重试，不产生重复版本且保留后续输入", async () => {
+  const { library, actor, user, input } = await editor();
+  await user.type(input, "\n发布内容");
+  await user.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText("草稿已保存");
+  await user.type(screen.getByLabelText("修改说明"), "直接发布");
+  const original = library.publishDraft.bind(library);
+  const publish = vi
+    .spyOn(library, "publishDraft")
+    .mockImplementationOnce(async (a, i) => {
+      await original(a, i);
+      throw new DomainError("UNAVAILABLE", "响应丢失");
+    });
+  await user.click(screen.getByRole("button", { name: "提交并生效" }));
+  await screen.findByText(/响应丢失/);
+  await user.type(input, "\n保留的新输入");
+  await user.click(screen.getByRole("button", { name: "重试原发布请求" }));
+  await screen.findByText("v3 已自动生效");
+  expect(publish.mock.calls[1][1]).toEqual(publish.mock.calls[0][1]);
+  expect(await library.listUpdateEvents(actor, 0)).toHaveLength(1);
+  expect((input as HTMLTextAreaElement).value).toContain("保留的新输入");
+});
+
+it("重叠修改必须选择，目标再变后保留手动结果并要求复核", async () => {
+  const { library, actor, user, input, simulatePublication } = await editor();
+  await user.clear(input);
+  await user.type(input, "# 本地内容");
+  const other = { ...actor, userId: "other" };
+  const d = await library.createDraft(other, "research");
+  const saved = await library.saveDraft(other, {
+    draftId: d.id,
+    expectedRevision: 1,
+    content: {
+      files: [
+        { path: "SKILL.md", content: "# 新版", mediaType: "text/markdown" },
+      ],
+    },
+  });
+  await library.publishDraft(other, {
+    draftId: d.id,
+    expectedRevision: saved.revision,
+    expectedBaseVersionId: saved.baseVersionId,
+    changeSummary: "新版",
+    idempotencyKey: "other-publish",
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  );
+  const result = await screen.findByLabelText("手动结果 · SKILL.md");
+  await user.type(result, "# 手动选择");
+  await simulatePublication("research");
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeDisabled(),
+  );
+  expect(result).toHaveValue("# 手动选择");
+  const previewOriginal = library.previewDraftUpdate.bind(library);
+  vi.spyOn(library, "previewDraftUpdate").mockImplementation(async (a, i) => ({
+    ...(await previewOriginal(a, i)),
+    conflicts: [],
+  }));
+  await user.click(screen.getByRole("button", { name: "重新比较并查看更新" }));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  expect(screen.getByLabelText("手动结果 · SKILL.md")).toHaveValue(
+    "# 手动选择",
+  );
+  expect(
+    screen.getByLabelText("已重新检查此选择 · SKILL.md"),
+  ).not.toBeChecked();
+  await user.click(screen.getByLabelText("已重新检查此选择 · SKILL.md"));
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await waitFor(() => expect(input).toHaveValue("# 手动选择"));
+});
+
+it("重连核对权威版本，过滤无关事件，重复乱序不倒退并在卸载时清理", async () => {
+  const demo = await createDemo(),
+    user = userEvent.setup();
+  const skill = await demo.library.getSkill(demo.actor, "research"),
+    draft = await demo.library.createDraft(demo.actor, "research");
+  let handlers!: Parameters<SkillUpdateSource["subscribe"]>[1];
+  const unsubscribe = vi.fn();
+  const updateSource: SkillUpdateSource = {
+    subscribe: (_a, h) => {
+      handlers = h;
+      return unsubscribe;
+    },
+  };
+  const get = vi.spyOn(demo.library, "getSkill");
+  const view = render(
+    <DraftEditor
+      {...demo}
+      updateSource={updateSource}
+      skill={skill}
+      initialDraft={draft}
+      onDirty={() => {}}
+      onSubmitted={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  const input = await screen.findByLabelText("SKILL.md");
+  await user.type(input, "\n连接期间输入");
+  await demo.simulatePublication("research");
+  await demo.simulatePublication("research");
+  const events = await demo.library.listUpdateEvents(demo.actor, 0);
+  const count = get.mock.calls.length;
+  act(() => {
+    handlers.onUpdate({ ...events[1], skillId: "weekly" });
+    handlers.onUpdate({ ...events[1], teamId: "other" });
+  });
+  expect(get).toHaveBeenCalledTimes(count);
+  act(() => {
+    handlers.onReconnect();
+    handlers.onUpdate(events[1]);
+    handlers.onUpdate(events[1]);
+    handlers.onUpdate(events[0]);
+  });
+  await screen.findByText(/此技能已有新版本/);
+  await user.click(screen.getByRole("button", { name: "重新比较并查看更新" }));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await waitFor(async () =>
+    expect(
+      (await demo.library.getDraft(demo.actor, draft.id)).baseVersionId,
+    ).toBe(events[1].versionId),
+  );
+  expect((input as HTMLTextAreaElement).value).toContain("连接期间输入");
+  view.unmount();
+  expect(unsubscribe).toHaveBeenCalledTimes(1);
+});
+
+it("另一标签页保存使应用失效且保留本地输入与选择", async () => {
+  const { library, actor, user, input, draft, simulatePublication } =
+    await editor();
+  await user.type(input, "\n仍须保留");
+  await simulatePublication("research");
+  await user.click(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  await library.saveDraft(actor, {
+    draftId: draft.id,
+    expectedRevision: 1,
+    content: draft.content,
+  });
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await screen.findByText(/修订已更新/);
+  expect((input as HTMLTextAreaElement).value).toContain("仍须保留");
+  expect(screen.getByRole("button", { name: "确认同步草稿" })).toBeDisabled();
+});
+
+it("删除冲突显式删除资源而非创建空文件", async () => {
+  const { library, actor, user, draft, simulatePublication } = await editor();
+  await simulatePublication("research");
+  const original = library.previewDraftUpdate.bind(library);
+  vi.spyOn(library, "previewDraftUpdate").mockImplementation(async (a, i) => ({
+    ...(await original(a, i)),
+    conflicts: [
+      {
+        path: "notes.md",
+        base: "旧",
+        current: undefined,
+        proposed: "我的修改",
+      },
+    ],
+  }));
+  const apply = vi.spyOn(library, "applyDraftUpdate");
+  await user.click(
+    await screen.findByRole("button", { name: "重新比较并查看更新" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "采用新版 · notes.md" }),
+  );
+  expect(screen.getByText(/删除此资源（不是空文件）/)).toBeInTheDocument();
+  await user.click(screen.getByLabelText("我已检查最终内容，确认同步草稿基线"));
+  await user.click(screen.getByRole("button", { name: "确认同步草稿" }));
+  await waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+  expect(
+    apply.mock.calls[0][1].resolvedContent.files.some(
+      (f) => f.path === "notes.md",
+    ),
+  ).toBe(false);
+  expect(
+    (await library.getDraft(actor, draft.id)).content.files.some(
+      (f) => f.path === "notes.md",
+    ),
+  ).toBe(false);
+});
+
+it("没有评审导航，查看者不能编辑，跨团队和非作者草稿被拒绝", async () => {
+  const demo = await createDemo(),
+    user = userEvent.setup();
+  render(
+    <App
+      {...demo}
+      actor={{ ...demo.actor, userId: "viewer", role: "viewer" }}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: "修改评审" }),
+  ).not.toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: /深度研究助手/ }));
+  expect(await screen.findByRole("button", { name: "修改" })).toBeDisabled();
+  const d = await demo.library.createDraft(demo.actor, "research");
+  await expect(
+    demo.library.getDraft({ ...demo.actor, userId: "other" }, d.id),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(
+    demo.library.listSkills({ ...demo.actor, teamId: "other" }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(
+    demo.library.publishDraft(
+      { ...demo.actor, userId: "viewer", role: "viewer" },
+      {
+        draftId: d.id,
+        expectedRevision: 1,
+        expectedBaseVersionId: d.baseVersionId,
+        changeSummary: "禁止",
+        idempotencyKey: "no",
+      },
+    ),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
+it("既有维护者即使角色为viewer仍可编辑并独立发布", async () => {
+  const demo = await createDemo(),
+    user = userEvent.setup();
+  const actor = { ...demo.actor, role: "viewer" as const };
+  const skill = await demo.library.getSkill(actor, "research");
+  skill.maintainerIds = [actor.userId];
+  const draft = await demo.library.createDraft(actor, skill.id);
+  render(
+    <DraftEditor
+      {...demo}
+      actor={actor}
+      skill={skill}
+      initialDraft={draft}
+      onDirty={() => {}}
+      onSubmitted={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  const input = await screen.findByLabelText("SKILL.md");
+  expect(input).toBeEnabled();
+  await user.type(input, "\n独立发布");
+  await user.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText("草稿已保存");
+  await user.type(screen.getByLabelText("修改说明"), "无需其他维护者");
+  await user.click(screen.getByRole("button", { name: "提交并生效" }));
+  expect(await screen.findByText("v3 已自动生效")).toBeInTheDocument();
+});
+
+it("打开时无广播源也能发现过期草稿，仍允许保存不完整文本", async () => {
+  const demo = await createDemo(),
+    user = userEvent.setup();
+  const skill = await demo.library.getSkill(demo.actor, "research"),
+    draft = await demo.library.createDraft(demo.actor, "research");
+  await demo.simulatePublication("research");
+  render(
+    <DraftEditor
+      library={demo.library}
+      actor={demo.actor}
+      skill={skill}
+      initialDraft={draft}
+      onDirty={() => {}}
+      onSubmitted={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  await screen.findByText(/此技能已有新版本/);
+  await user.clear(await screen.findByLabelText("SKILL.md"));
+  await user.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText("草稿已保存");
+  const saved = await demo.library.getDraft(demo.actor, draft.id);
+  expect(saved.baseVersionId).toBe("research-v2");
+  expect(saved.content.files[0].content).toBe("");
+  await user.type(screen.getByLabelText("修改说明"), "过期不能发布");
+  expect(screen.getByRole("button", { name: "提交并生效" })).toBeDisabled();
+  expect(await demo.library.listUpdateEvents(demo.actor, 0)).toHaveLength(1);
 });
