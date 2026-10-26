@@ -14,6 +14,8 @@ Proposal review: maintainers can review others' proposals, never their own. prev
 
 No subscriptions. listUpdateEvents is a durable cursor feed for integration's push/reconnect layer, not a notification mailbox. Event sequence is monotonic and actor/team scoped. Version, current pointer, proposal state and event are committed atomically.
 
+Preview state rules: pending, changes_requested and conflicted proposals may be inspected by the author or maintainer; withdrawn, rejected and merged proposals cannot get an actionable preview. Review and merge still require pending state. When using a preview to create a resolved/revised draft, compare the returned draft baseVersionId with preview.currentVersionId before saving; if they differ, preserve user input and request a fresh comparison. Absence of a file in a conflict means deletion, distinct from empty content.
+
 Runtime defaults (provisional D1-D3): choice applies to future tasks in that session only; pinned old version remains until unpinned; no choice means latest. A task ID is idempotent and its snapshot immutable, including on recovery. Child tasks inherit the parent snapshot. getSessionUpdates uses actual invocation records plus authoritative host state so dropped events cannot hide changes. setPreference validates the user's viewed target; for latest the target must still be current, otherwise STALE_REVISION; for pinned the target must be an actually used version in that session. Never trust caller-supplied actor for production authentication: integration resolves Actor on the server from the host identity system.
 
 First-wave tests prove module behavior only. Real Agent lifecycle, authenticated transport, cross-module ordering and push latency remain integration acceptance gates.
