@@ -84,6 +84,49 @@
 .product-sidebar {
   overflow-y: auto;
 }
+.task-surface [aria-label="任务执行"] > h2 {
+  font-size: 1.7rem;
+  margin: 0 0 1.5rem;
+}
+.task-surface [aria-label="任务执行"] form,
+.task-surface [aria-label="任务执行"] article {
+  border: 1px solid #d7e1dc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: white;
+  max-width: 56rem;
+}
+.task-surface [aria-label="任务执行"] label {
+  display: block;
+  margin: 0.75rem 0;
+}
+.task-surface [aria-label="任务执行"] textarea {
+  display: block;
+  width: 100%;
+  min-height: 9rem;
+  margin-top: 0.5rem;
+}
+.task-surface [aria-label="任务执行"] fieldset {
+  border: 1px solid #d7e1dc;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+.task-surface [aria-label="任务执行"] input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.6rem;
+}
+.task-surface [aria-label="任务执行"] button {
+  margin: 0.25rem 0.5rem 0.25rem 0;
+}
+.task-surface [aria-label="任务执行"] li {
+  margin: 0.75rem 0;
+  overflow-wrap: anywhere;
+}
+.task-surface [aria-label="任务执行"] pre {
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f1f5f3;
+}
 @media (max-width: 700px) {
   .product .product-sidebar-bottom {
     position: static;

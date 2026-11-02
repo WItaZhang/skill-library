@@ -8,4 +8,14 @@
 
 `fixture.ts` 仅被组件测试引用；生产入口无内存 demo、伪身份、演示控制。访客演示仍使用独立 `src/integration/browser.tsx`、`server.ts`、`start.ts` 和旧 compose.py，建议不同 origin/端口。正式服务器不路由 `/api/demo/*`。
 
+## 第 4–6 阶段集成
+
+正式任务页挂载 execution 的 `ExecutionPanel`，由 ProductScope 注入携带身份/CSRF 的 execution client。详情“使用技能”预选当前技能，任务列表、创建与详情分开；查看者只见权限说明，不调用编辑者专用执行 API。执行表单把脏状态交给工作区离开保护。访客 TaskPage 保留原演示流程，正式入口不再引用它。
+
+每个工作区复用一条 SSE，编辑器订阅复用此连接。身份/角色撤销的 `access.revoked` 控制事件立即销毁整个 scope、所有请求/执行客户端与缓存，不等 React 卸载；普通断网/503 保留输入。重新连接核对 session、成员角色及正式版本，不能把旧身份内容带入新工作区。
+
+发布丢包后的原请求重试只清理原发布的修改说明，保留后续说明/正文。预览超越在途版本查询时等待权威核对后再判定有效性；旧保存/预览/同步响应不能覆盖后续输入。确认同步期间新输入保留在恢复对照区，明确整合前暂停自动保存和发布。
+
+最终构建依赖 execution 与 operations 的已提交接口，不往本 worktree 复制他人源码。`src/modules/collaboration/assemble.py` 可只读导出组合目录；完整复现见 `docs/acceptance/production-collaboration.md`。
+
 复现、真实数据库和 Chrome 验收命令见 `docs/acceptance/production-product.md`。OAuth 集成测试显式使用 testProvider；没有真实 GitHub 凭证验证。邀请 token 在登录前临时存入 sessionStorage，接受成功后删除。

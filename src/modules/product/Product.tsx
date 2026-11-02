@@ -17,7 +17,8 @@ import type {
   SkillUpdateSource,
 } from "../../contracts";
 import { ProductEditor } from "./Editor";
-import { TaskPage } from "../../integration/TaskPage";
+import { ExecutionPanel } from "../execution/components";
+import type { ExecutionClient } from "../../contracts/execution";
 import { Content, Feedback, LoadState, useAction, useLoad } from "../web/ui";
 import "../web/styles.css";
 import "../../integration/portfolio.css";
@@ -32,15 +33,15 @@ type Screen =
 export function ProductionProduct({
   actor,
   library,
-  runtime,
+  execution,
   updateSource,
-  initialSessionId,
   onDirtyChange,
   identityPanel,
 }: {
   actor: Actor;
   library: ProductionLibraryService;
   runtime?: RuntimeService;
+  execution?: ExecutionClient;
   updateSource: SkillUpdateSource;
   initialSessionId?: string;
   onDirtyChange: (dirty: boolean) => void;
@@ -48,7 +49,6 @@ export function ProductionProduct({
 }) {
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [query, setQuery] = useState("");
-  const [sessionId, setSessionId] = useState(initialSessionId);
   const [includeArchived, setIncludeArchived] = useState(false);
   const markDirty = (value: boolean) => {
     dirty.current = value;
@@ -127,7 +127,7 @@ export function ProductionProduct({
             <span aria-hidden>▤</span> 技能库{" "}
             <small>{catalog.data?.length ?? "—"}</small>
           </button>
-          {runtime && (
+          {execution && (
             <button
               aria-current={screen.kind === "tasks" ? "page" : undefined}
               onClick={() => navigate({ kind: "tasks" })}
@@ -327,7 +327,7 @@ export function ProductionProduct({
                 else navigate({ kind: "edit", skill: screen.skill, draft });
               }}
               onUse={
-                runtime
+                execution && actor.role !== "viewer"
                   ? () => navigate({ kind: "tasks", skill: screen.skill })
                   : undefined
               }
@@ -364,23 +364,22 @@ export function ProductionProduct({
               </div>
             </>
           )}
-          {screen.kind === "tasks" && runtime && sessionId && (
+          {screen.kind === "tasks" && execution && (
             <div className="task-surface">
-              <TaskPage
-                library={library}
-                runtime={runtime}
-                actor={actor}
-                sessionId={sessionId}
-                onSession={(id) => {
-                  setSessionId(id);
-                  sessionStorage.setItem(
-                    `skill-library:session:${actor.teamId}:${actor.userId}`,
-                    id,
-                  );
-                }}
-                requestedSkill={screen.skill}
-                onRequestedUsed={() => setScreen({ kind: "tasks" })}
-              />
+              {actor.role === "viewer" ? (
+                <p>当前为查看权限，执行任务需要编辑权限。</p>
+              ) : (
+                <ExecutionPanel
+                  key={screen.skill?.id ?? "tasks"}
+                  client={execution}
+                  scopeKey={`${actor.teamId}:${actor.userId}:${actor.role}`}
+                  skills={(catalog.data ?? [])
+                    .filter((s) => s.currentVersionId && !s.archivedAt)
+                    .map((s) => ({ id: s.id, name: s.name }))}
+                  initialSkillId={screen.skill?.id}
+                  onDirtyChange={markDirty}
+                />
+              )}
             </div>
           )}
         </main>

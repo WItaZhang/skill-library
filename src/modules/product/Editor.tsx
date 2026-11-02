@@ -151,12 +151,19 @@ export function ProductEditor({
   useEffect(() => {
     if (
       update &&
-      (update.targetVersionId !== current ||
+      ((!checking && update.targetVersionId !== current) ||
         update.draftRevision !== draft?.revision ||
         previewGeneration !== editCount)
     )
       setInvalid(true);
-  }, [update, current, draft?.revision, previewGeneration, editCount]);
+  }, [
+    update,
+    current,
+    checking,
+    draft?.revision,
+    previewGeneration,
+    editCount,
+  ]);
   const unsavedExtras = !!summary.trim() || !!path.trim();
   const dirty = !!draft && !same(content, draft.content);
   useEffect(() => {
