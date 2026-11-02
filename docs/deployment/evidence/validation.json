@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-01 America/Los_Angeles",
+  "node": "24.22.2",
+  "nodeDistributionSha256": "aa9549349e47dffaa42dcf95d6e06ade8c4bdafc980979883b88767670df385a",
+  "postgres": "17.11 (Homebrew)",
+  "chrome": "Google Chrome 156.0.8078.74",
+  "assembly": "/var/folders/8g/tf_4yqbs6fbfkhxzd_m66v840000gn/T/production-operations-combined-2rue8bdb",
+  "sources": {
+    "execution": "ccb79ad192c25f15853e0046a7bc57f51243ded3",
+    "collaboration": "78dd4d08cd936da509568426a01f4d489676fc6d",
+    "operations": "9ee8c23e5f433169ee8d3478e5e409315d8bf719",
+    "operationsDirty": false
+  },
+  "command": "DATABASE_URL=<local test DB> DRILL_ADMIN_URL=<same cluster with CREATEDB> PG_BIN=/opt/homebrew/opt/postgresql@17/bin COLLABORATION_PORT=18764 DRILL_REPORT=/tmp/production-operations-final-drill.json sh src/integration/verify-release.sh",
+  "exitCode": 0,
+  "testsPassed": 155,
+  "testsSkipped": 0,
+  "checks": {
+    "typechecks": "all modules plus production and visitor integration passed",
+    "builds": [
+      "product",
+      "web"
+    ],
+    "compose": "5.6.1 config --quiet passed; official checksum verified",
+    "caddy": "2.11.7 validate passed",
+    "prometheus": "3.13.5 official checksum verified; 6 rules checked, alert tests passed",
+    "shellSyntax": "passed",
+    "workflowYaml": "parsed",
+    "backupRestore": "passed, real pg_dump and pg_restore; new source and target DBs; execution fixture only"
+  },
+  "notVerified": [
+    "Docker image build/run (no engine)",
+    "GitHub Actions execution (no push)",
+    "public HTTPS deployment (no host/domain)",
+    "real GitHub OAuth accounts (no credentials)",
+    "real model call (no service credentials)",
+    "offsite encrypted backups (no account)",
+    "external alert delivery (no channel configured)"
+  ],
+  "logSha256": "1f182c44dcd5f35f569c295b8836f48ac0dc98f4f1fb7c158915c675326a6083"
+}
