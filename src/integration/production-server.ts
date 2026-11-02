@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import type { Socket } from "node:net";
 import { readFile, stat, realpath } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import type { Pool } from "pg";
@@ -90,6 +91,7 @@ export async function createProductionApplication(
       })();
     return readiness;
   }
+  const sockets = new Map<Socket, number>();
   const server = createServer(
     {
       requestTimeout: 15000,
@@ -98,6 +100,19 @@ export async function createProductionApplication(
       maxHeaderSize: 16384,
     },
     async (req, res) => {
+      const socket = req.socket;
+      sockets.set(socket, (sockets.get(socket) ?? 0) + 1);
+      let released = false;
+      const releaseSocket = () => {
+        if (released) return;
+        released = true;
+        if (!sockets.has(socket)) return;
+        const active = Math.max(0, sockets.get(socket)! - 1);
+        sockets.set(socket, active);
+        if (closing && active === 0) socket.end();
+      };
+      res.once("finish", releaseSocket);
+      res.once("close", releaseSocket);
       let path: string;
       try {
         path = new URL(req.url ?? "/", options.publicOrigin).pathname;
@@ -237,6 +252,11 @@ export async function createProductionApplication(
       }
     },
   );
+  server.on("connection", (socket) => {
+    sockets.set(socket, 0);
+    socket.once("close", () => sockets.delete(socket));
+    if (closing) socket.destroy();
+  });
   server.maxRequestsPerSocket = 1000;
   server.once("listening", () => execution?.start());
   const onPoolError = (e: Error) => {
@@ -271,6 +291,10 @@ export async function createProductionApplication(
           }
           server.close((e) => (e ? reject(e) : done()));
           server.closeIdleConnections();
+          // Node 24 can retain a client's replacement TCP connection which has sent no
+          // HTTP request yet. Close these idle sockets without cutting off active writes.
+          for (const [socket, active] of sockets)
+            if (active === 0) socket.destroy();
         });
         let timer: ReturnType<typeof setTimeout> | undefined;
         try {

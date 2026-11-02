@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { createConnection } from "node:net";
 import { Pool } from "pg";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -358,3 +359,50 @@ test("migration mismatch fails before listen and preserves ledger", async (t) =>
     await root.end();
   }
 });
+
+test(
+  "shutdown closes unused TCP while draining an active write response",
+  { timeout: 5000 },
+  async (t) => {
+    let entered!: () => void, release!: () => void;
+    const enteredPromise = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const factory: ExecutionFactory = () => ({
+      start() {},
+      async stop() {},
+      async handle(req, res) {
+        if (req.url !== "/api/execution/accept") return false;
+        entered();
+        await gate;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end('{"saved":true}');
+        return true;
+      },
+    });
+    const f = await fixture(t, {}, factory),
+      user = await f.login();
+    const idle = createConnection({
+      host: "127.0.0.1",
+      port: Number(new URL(f.base).port),
+    });
+    await new Promise<void>((done, reject) => {
+      idle.once("connect", done);
+      idle.once("error", reject);
+    });
+    const idleClosed = new Promise<void>((done) =>
+      idle.once("close", () => done()),
+    );
+    const request = f.post(user, "/api/execution/accept", {});
+    await enteredPromise;
+    const closing = f.app.close();
+    release();
+    const response = await request;
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { saved: true });
+    await Promise.all([closing, idleClosed]);
+  },
+);

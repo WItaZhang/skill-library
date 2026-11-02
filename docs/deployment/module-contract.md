@@ -10,3 +10,11 @@
 - 4 继续拥有 Product/App，5 的 React ExecutionPanel 由 4 挂载；6 保留原访客/HTTP/Chrome 回归。4 请在自身 collaboration 目录提供无凭据也可运行的真实 PG + 双 context 浏览器命令，缺 PG/Chrome 必须失败，不 skip 绿灯。
 - CI 从最终合并仓库安装各模块自身 lockfile，运行 typecheck/build、真实 PG、浏览器关键回归。operations 独立分支先运行可用基线；临时组合测试使用导出目录，不修改任何其他 worktree。
 - 外部 GitHub OAuth、真实模型调用、公网 HTTPS 分别验收；testProvider/fixture 只证明本地 HTTP/PG/浏览器集成。
+
+## 最终宿主接入
+
+已按 execution `ccb79ad` 实现 `productionExecutionFactory({apiKey,model,workspaceId?})`，真实模块由配置启用后加载，内部实际调用 `createExecutionService({pool,provider,onError})` / `createExecutionHttpHandler({execution,identity})`。宿主 options `executionFactory({pool,identity,onError?}) → {handle,start,stop}` 也是本地集成注入入口；fixture 只能由测试显式注入，正式入口不会注入。`onError` 只接受有限安全码并产生日志/指标。
+
+启动 listen 时才 start；关闭先禁止新请求，分别关闭事件 handler，停止 worker，保留正在执行的 HTTP 写响应，清理空闲/尚未发送请求的 TCP，最后关闭 Pool。Node 24 已增加专门验证。SSE 和 RPC 使用相同 library/identity，但分别持有 transport 生命周期，以免关闭事件流时截断正在排空的 RPC。
+
+协作 `78dd4d0` 的 ExecutionPanel 与 `access.revoked` 已纳入临时组合。CI 包含 `npm run typecheck` 和 `npm test --prefix src/modules/collaboration`；独立回归默认 `COLLABORATION_PORT=18764`，测试 provider 只证明真实 HTTP/PG/Chrome 服务链路。
