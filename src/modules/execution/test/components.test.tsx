@@ -12,7 +12,10 @@ import type {
   ExecutionClient,
   ExecutionRecord,
 } from "../../../contracts/execution.ts";
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 const row: ExecutionRecord = {
   id: "execution1",
   taskId: "task1",
@@ -164,4 +167,28 @@ test("uncertain attempt requires cost acknowledgement before retry", async () =>
       }),
     ),
   );
+});
+
+test("returning from an unfinished task requires confirmation and preserves input on cancel", async () => {
+  const c = client();
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  render(
+    <ExecutionPanel
+      client={c}
+      scopeKey="one"
+      skills={skills}
+      initialSkillId="skill1"
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("任务内容"), {
+    target: { value: "important input" },
+  });
+  fireEvent.click(screen.getByText("返回列表"));
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect((screen.getByLabelText("任务内容") as HTMLTextAreaElement).value).toBe(
+    "important input",
+  );
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByText("返回列表"));
+  expect(screen.queryByLabelText("任务内容")).toBeNull();
 });

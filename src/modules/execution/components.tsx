@@ -211,7 +211,10 @@ function Panel({
           <button
             type="button"
             disabled={busy}
-            onClick={() => setCreating(false)}
+            onClick={() => {
+              if (!dirty || window.confirm("放弃尚未提交的任务内容？"))
+                setCreating(false);
+            }}
           >
             返回列表
           </button>
