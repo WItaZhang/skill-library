@@ -4,7 +4,7 @@
 
 A shared workspace for teams that build and maintain AI agent skills: reusable instructions and supporting text resources. Create, review changes, publish immutable versions, and trace task results back to the exact skills used.
 
-[中文介绍](README.zh-CN.md) · [Architecture](#how-it-works) · [Run locally](#run-locally) · [Validation](docs/acceptance/production-456-merged.md)
+[中文介绍](README.zh-CN.md) · [How it works](#how-it-works) · [Get started](#get-started) · [Deployment guide](docs/deployment/runbook.md)
 
 ## The problem
 
@@ -32,21 +32,23 @@ Skill Library makes these situations visible and recoverable.
 4. **Resolve changes deliberately.** Compare base, local, and published content; confirm how to combine changes. Restore an older version by creating a new draft.
 5. **Follow the execution.** Inspect the selected skills, fixed versions, execution attempts, result, and failure state in one task view.
 
+## Built for changes that matter
+
+Consider two teammates editing the same research skill:
+
+- Both start from **v1**. One publishes **v2** while the other is still writing.
+- The second teammate sees the update, keeps their input, and reconciles the differences before publishing **v3**.
+- A task already accepted on **v1** continues using **v1**, including retries and child tasks.
+- A new task picks up **v3** by default.
+
+The team can keep improving the skill while every task retains a clear record of the instructions it used.
+
 <details>
 <summary><strong>See the collaboration workflow</strong></summary>
 
 ![Three-way comparison preserves local input while showing a newer published skill](docs/images/collaboration.png)
 
-Actual product screenshot from the two-browser acceptance test. The interface is currently in Chinese; the users and content are test fixtures.
-
-</details>
-
-<details>
-<summary><strong>See task history and execution details</strong></summary>
-
-![Task detail showing fixed skill versions, execution attempts, and a result](docs/images/execution.png)
-
-Actual integrated task UI. The displayed provider and result are explicitly labeled fixtures; this screenshot is not evidence of a live model call.
+Compare the base version, your edits, and the latest published content before applying an update. Shown with sample data in the Chinese interface.
 
 </details>
 
@@ -75,52 +77,35 @@ Two transaction boundaries protect the product’s most important promises:
 
 Concurrent publication from the same base has one winner. The other author keeps their draft. Execution uses bounded attempts and leases; a timed-out call that may have reached the provider becomes `uncertain` instead of being silently retried.
 
-**Deliberate tradeoffs:** team-level locks simplify write ordering at the cost of parallel writes within one team. The initial deployment is a single app instance because OAuth pending state and rate limits are in memory. Existing skill content uses JSONB with generated relational columns and database constraints; new execution records use explicit columns. Model execution currently generates text without shell or tool access.
+The application is designed for a single app instance backed by persistent PostgreSQL. Team-level locking gives publication and task acceptance a defined order. Model execution uses the configured Anthropic model to generate text from the selected skill resources, without shell or tool access.
 
 Explore the [database design and migrations](src/modules/persistence/README.md), [execution state machine](src/modules/execution/README.md), and [deployment runbook](docs/deployment/runbook.md).
 
-## Run locally
+## Get started
 
-Requirements: **Node.js 24+, PostgreSQL 17+, and Chrome/Chromium** for browser tests. Run commands from the repository root.
+Self-host Skill Library with **Node.js 24+ and PostgreSQL 17+**. Configure an HTTPS origin and a GitHub OAuth app for your workspace. The [deployment guide](docs/deployment/runbook.md) covers Docker Compose, secrets, backups, and monitoring.
+
+From the repository root:
 
 ```sh
-# Install the committed dependency lockfiles.
 sh src/deployment/install.sh
-
-# Use a dedicated local test cluster, not a production database.
-export DATABASE_URL='postgresql://USER:PASSWORD@127.0.0.1:5432/skill_library_test'
-export DRILL_ADMIN_URL="$DATABASE_URL"
-export PG_BIN='/path/to/postgresql-17/bin'
-export CHROME_PATH='/path/to/chrome-or-chromium'
-
-# Type checks, builds, unit/integration/browser tests, and a real restore drill.
-sh src/integration/verify-release.sh
-```
-
-The test role needs permission to create schemas and temporary databases. The suite cleans up its test data. OAuth and model responses in automated tests use explicit fixtures, so real provider credentials are not required for this verification path.
-
-To run the actual application, configure an HTTPS origin, GitHub OAuth credentials, PostgreSQL, and a metrics secret following the [deployment runbook](docs/deployment/runbook.md). Then build the product and start the server:
-
-```sh
 npm run build --prefix src/modules/product
+
+# After configuring the server environment:
 npm run start:production --prefix src
 ```
 
-Enable model execution with server-side `ANTHROPIC_API_KEY`, `EXECUTION_MODEL`, and `EXECUTION_ENABLED=true`. Missing configuration fails explicitly; there is no simulated production result fallback.
-
-## What is verified today
-
-**155 tests passed** in the local release acceptance on Node 24 and real PostgreSQL, including two isolated Chrome sessions. The subsequent escaped-prompt boundary fix also passed all 18 execution tests and its type check.
-
-Coverage includes concurrent publishing, unsaved-input protection, reconnect recovery, access revocation, worker crashes, fixed-version retries and child tasks, request limits, safe logging, graceful restarts, and a real `pg_dump` / `pg_restore` drill. [Read the evidence](docs/acceptance/production-456-merged.md).
-
-| Status | Scope |
+| Configuration | Purpose |
 | --- | --- |
-| Implemented and locally verified | Team workflows, skill management, collaboration, execution persistence and recovery, monitoring, and backup restoration. |
-| Implemented; external verification pending | GitHub OAuth with two real accounts and an actual Anthropic model execution. |
-| Defined; deployment verification pending | GitHub Actions, production Docker image, public HTTPS hosting, off-host backups, and external alert delivery. |
+| `DATABASE_URL` | PostgreSQL connection |
+| `PUBLIC_ORIGIN` | Workspace HTTPS origin |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub sign-in; callback is `PUBLIC_ORIGIN/api/identity/callback` |
+| `METRICS_TOKEN` | Private monitoring endpoint credential |
+| `EXECUTION_ENABLED=true`, `ANTHROPIC_API_KEY`, `EXECUTION_MODEL` | Enable model execution with your provider account |
 
-There is no public demo URL yet. The repository includes deployment configuration and an explicit checklist for completing those external checks.
+Keep credentials on the server. Secret-file configuration and optional Anthropic workspace selection are documented in the deployment guide.
+
+Once the server is running, sign in, create a team, and publish your first skill. Invite a teammate to collaborate, or select a published skill to create a task.
 
 ## Code map
 
@@ -133,5 +118,3 @@ There is no public demo URL yet. The repository includes deployment configuratio
 | `src/modules/execution` | Provider adapter, attempts, cancellation, recovery, and task UI |
 | `src/modules/operations` | Configuration, limits, telemetry, and restore drills |
 | `src/integration` · `src/deployment` | Application composition, release checks, and deployment |
-
-Earlier SQLite modules remain for migration compatibility and regression tests. The production application uses PostgreSQL.

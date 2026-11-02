@@ -4,7 +4,7 @@
 
 面向共同维护 AI Agent 技能的团队：把可复用指令与配套文本资源，组织成可协作编辑、可发布、可追溯的技能库。
 
-[English](README.md) · [数据库设计](src/modules/persistence/README.md) · [验收记录](docs/acceptance/production-456-merged.md) · [部署手册](docs/deployment/runbook.md)
+[English](README.md) · [开始使用](#开始使用) · [数据库设计](src/modules/persistence/README.md) · [部署指南](docs/deployment/runbook.md)
 
 ## 当一份好用的提示词，开始被整个团队依赖
 
@@ -28,21 +28,23 @@
 4. 查看三方差异，明确确认同步；恢复旧版会创建新草稿，不改写历史。
 5. 在任务详情里查看固定技能版本、执行尝试、结果和错误状态。
 
+## 一次更新，不打断正在进行的工作
+
+以两位同事共同维护研究技能为例：
+
+- 两人都从 **v1** 开始修改，一人先发布 **v2**。
+- 另一人收到提醒，保留自己的输入，明确处理差异后发布 **v3**。
+- 已经接受的任务继续使用 **v1**，它的重试与子任务也保持 **v1**。
+- 新任务默认使用 **v3**。
+
+团队可以持续改进技能，每个任务也始终能查到自己使用的指令版本。
+
 <details>
 <summary><strong>查看协作与差异处理界面</strong></summary>
 
 ![保留本地输入的三方差异界面](docs/images/collaboration.png)
 
-真实产品的双浏览器验收截图，账号与内容为测试数据。
-
-</details>
-
-<details>
-<summary><strong>查看任务执行详情</strong></summary>
-
-![固定技能版本、执行尝试与结果](docs/images/execution.png)
-
-截图来自已接入的任务界面；其中模型提供方与结果明确为 fixture，不代表真实模型调用成功。
+对照基础版本、自己的修改和团队最新版，再决定如何应用更新。图中使用示例数据。
 
 </details>
 
@@ -54,42 +56,34 @@
 
 **接受任务事务**一次提交固定版本快照和待执行请求。外部模型调用发生在事务之外，避免持锁等待网络。执行尝试有次数上限和租约；无法确认远端结果时标记 `uncertain`，不盲目自动重试。
 
-取舍也保持明确：团队级锁简化写入顺序，但限制单团队并行写入；OAuth 临时状态和限流保留在内存，首版按单实例部署。技能内容使用 JSONB 配合生成列、外键和唯一约束，新增执行记录使用显式业务列。当前执行器生成文本，不开放 shell 或工具执行。
+应用采用单实例服务与持久 PostgreSQL，使用团队级锁明确发布和接受任务的先后顺序。执行器连接配置的 Anthropic 模型，依据所选技能资源生成文本，不开放 shell 或工具执行。
 
 详细设计见 [数据库与迁移](src/modules/persistence/README.md)、[执行状态机](src/modules/execution/README.md)。
 
-## 本地运行与验证
+## 开始使用
 
-需要 Node.js 24+、PostgreSQL 17+ 和 Chrome/Chromium。仓库根目录执行：
+使用 **Node.js 24+ 和 PostgreSQL 17+** 自行部署，配置 HTTPS 访问地址与 GitHub OAuth 应用。[部署指南](docs/deployment/runbook.md)提供 Docker Compose、密钥、备份和监控配置。
+
+在仓库根目录执行：
 
 ```sh
 sh src/deployment/install.sh
-
-export DATABASE_URL='postgresql://USER:PASSWORD@127.0.0.1:5432/skill_library_test'
-export DRILL_ADMIN_URL="$DATABASE_URL"
-export PG_BIN='/path/to/postgresql-17/bin'
-export CHROME_PATH='/path/to/chrome-or-chromium'
-
-sh src/integration/verify-release.sh
-```
-
-使用独立测试数据库，账号须能创建 schema 和临时数据库；脚本清理自己创建的测试数据。该路径使用明确的 OAuth / 模型 fixture，不需要真实提供方凭据。
-
-启动正式应用前，按[部署手册](docs/deployment/runbook.md)配置 HTTPS origin、GitHub OAuth、PostgreSQL 和监控密钥，再执行：
-
-```sh
 npm run build --prefix src/modules/product
+
+# 配置服务端环境变量后启动：
 npm run start:production --prefix src
 ```
 
-真实模型执行另需服务端 `ANTHROPIC_API_KEY`、`EXECUTION_MODEL` 和 `EXECUTION_ENABLED=true`。缺配置明确失败，不返回假执行结果。
+| 配置 | 用途 |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL 连接 |
+| `PUBLIC_ORIGIN` | 工作空间的 HTTPS 地址 |
+| `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET` | GitHub 登录；回调地址为 `PUBLIC_ORIGIN/api/identity/callback` |
+| `METRICS_TOKEN` | 私有监控接口凭据 |
+| `EXECUTION_ENABLED=true`、`ANTHROPIC_API_KEY`、`EXECUTION_MODEL` | 使用你的模型账号启用任务执行 |
 
-## 当前验证到哪一步
+凭据只放在服务端。密钥文件方式和可选的 Anthropic workspace 配置见部署指南。
 
-Node 24、真实 PostgreSQL 与隔离 Chrome 会话下，**155 项发布验收测试通过**；随后对任务文本转义边界的修复，重新通过全部 18 项执行测试和类型检查。
+启动后，登录并创建团队，发布第一个技能。邀请同事共同编辑，或选择已发布技能创建任务。
 
-已验证并发发布、输入保护、断线恢复、权限撤销、worker 崩溃、重试和子任务版本固定、限流、日志脱敏、进程重启，以及真正的 `pg_dump / pg_restore` 备份恢复。[完整证据](docs/acceptance/production-456-merged.md)
-
-真实双 GitHub 账号、真实模型调用、Docker 镜像运行、GitHub CI 实际运行和公网 HTTPS 仍待外部配置与验收。当前没有公开演示链接；部署定义、运行手册和最后验收步骤已在仓库中提供。
-
-源码目录和架构图见 [English README](README.md#code-map)。生产路径使用 PostgreSQL，旧 SQLite 模块保留用于历史数据迁移与回归。
+源码目录与架构图见 [English README](README.md#code-map)。
