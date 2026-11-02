@@ -4,8 +4,7 @@ set -eu
 image=${1:?Pass a built image tag}
 name="skill-smoke-$(date +%s)-$$"
 network="$name-network"
-tmp=$(mktemp -d)
-cleanup() { docker rm -f "$name-app" "$name-db" >/dev/null 2>&1 || true; docker network rm "$network" >/dev/null 2>&1 || true; rm -rf "$tmp"; }
+cleanup() { docker rm -f "$name-app" "$name-db" >/dev/null 2>&1 || true; docker network rm "$network" >/dev/null 2>&1 || true; }
 trap cleanup EXIT HUP INT TERM
 docker network create "$network" >/dev/null
 docker run -d --name "$name-db" --network "$network" -e POSTGRES_PASSWORD=ci-only postgres:17-bookworm >/dev/null

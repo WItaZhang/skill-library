@@ -9,13 +9,15 @@ export interface ExecutionExtension {
 export type ExecutionFactory = (context: {
   pool: Pool;
   identity: IdentityService;
+  onError?: (code: string) => void;
 }) => ExecutionExtension | Promise<ExecutionExtension>;
 /** Only loads the actual module. Missing source/config is a startup error, never a fixture fallback. */
 export function productionExecutionFactory(config: {
   apiKey: string;
   model: string;
+  workspaceId?: string;
 }): ExecutionFactory {
-  return async ({ pool, identity }) => {
+  return async ({ pool, identity, onError }) => {
     const moduleUrl = new URL("../execution/index.ts", import.meta.url).href;
     const {
       createExecutionService,
@@ -24,6 +26,7 @@ export function productionExecutionFactory(config: {
     } = await import(moduleUrl);
     const execution = createExecutionService({
       pool,
+      onError,
       provider: createAnthropicProvider(config),
     });
     return {

@@ -76,6 +76,11 @@ export function loadConfig(env: Environment = process.env) {
     throw new Error("METRICS_TOKEN must have at least 32 characters");
   const apiKey = secret(env, "ANTHROPIC_API_KEY", executionEnabled);
   const model = env.EXECUTION_MODEL;
+  const workspaceId = env.ANTHROPIC_WORKSPACE_ID || undefined;
+  if (workspaceId && !/^[a-zA-Z0-9_-]{1,100}$/.test(workspaceId))
+    throw new Error(
+      "ANTHROPIC_WORKSPACE_ID must be a valid workspace identifier",
+    );
   if (executionEnabled && (!model || !/^[a-zA-Z0-9._:-]{1,150}$/.test(model)))
     throw new Error("EXECUTION_MODEL is required when execution is enabled");
   return {
@@ -88,7 +93,7 @@ export function loadConfig(env: Environment = process.env) {
     metricsToken,
     trustedProxyIps,
     execution: executionEnabled
-      ? { apiKey: apiKey!, model: model! }
+      ? { apiKey: apiKey!, model: model!, workspaceId }
       : undefined,
     port: integer(env, "PORT", 8080, 1, 65535),
     poolMax: integer(env, "PG_POOL_MAX", 10, 2, 50),

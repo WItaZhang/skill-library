@@ -22,7 +22,7 @@ cp src/deployment/.env.example src/deployment/.env
 node src/deployment/prepare-secrets.ts
 ```
 
-编辑 `.env` 的 `APP_DOMAIN`、完全一致的 `PUBLIC_ORIGIN=https://...`、已合并 SHA 和 GitHub client ID。GitHub OAuth App callback 必须是 `PUBLIC_ORIGIN/api/identity/callback`。通过目标机 secret 管理方式填写 `secrets/github_client_secret`；启用执行时设 `EXECUTION_ENABLED=true`、`EXECUTION_MODEL`，填写 `secrets/anthropic_api_key`。禁用执行会在 API 明确返回未配置，不返回 fixture 输出。
+编辑 `.env` 的 `APP_DOMAIN`、完全一致的 `PUBLIC_ORIGIN=https://...`、已合并 SHA 和 GitHub client ID。GitHub OAuth App callback 必须是 `PUBLIC_ORIGIN/api/identity/callback`。通过目标机 secret 管理方式填写 `secrets/github_client_secret`；启用执行时设 `EXECUTION_ENABLED=true`、`EXECUTION_MODEL`，填写 `secrets/anthropic_api_key`；非 workspace-scoped key 还需 `ANTHROPIC_WORKSPACE_ID`。禁用执行会在 API 明确返回未配置，不返回 fixture 输出。
 
 `prepare-secrets.ts` 只生成本机 DB/metrics 随机 secret，不生成假 OAuth/模型配置，不覆盖已有文件。secret 目录为 0700；文件为 0444，使 Compose 文件挂载后的 app UID 1000/Prometheus UID 65534 可读，宿主依靠 0700 父目录限制访问。首次填写空 OAuth/provider 文件可先 `chmod 600`、填写再 `chmod 444`。父目录应归运行部署的受控账号；Compose 本地 secrets 是文件挂载，并非加密 secret store。禁止提交、打入镜像、打印 `DATABASE_URL` 或开启 `set -x`。宿主磁盘和备份必须有访问控制与加密。
 
@@ -47,6 +47,7 @@ CI `.github/workflows/production.yml` 在 PR/main/手动运行，强制全部模
 | METRICS_TOKEN（支持 _FILE） | 至少 32 字符；抓取器和应用共享，仅内网使用 |
 | EXECUTION_ENABLED | true/false，默认 false；不通过 NODE_ENV 偷开测试认证 |
 | ANTHROPIC_API_KEY（支持 _FILE）/EXECUTION_MODEL | 启用执行时必须；仅服务器读取 |
+| ANTHROPIC_WORKSPACE_ID | 非 workspace-scoped 模型 key 所需的 workspace 选择器 |
 | TRUSTED_PROXY_IPS | 逗号分隔精确直连代理 IP；默认空，忽略任意转发头 |
 | PORT / PG_POOL_MAX / SHUTDOWN_TIMEOUT_MS | 默认 8080 / 10 / 20000；有范围检查 |
 | RELEASE_SHA | 日志标识构建版本，不是业务密钥 |

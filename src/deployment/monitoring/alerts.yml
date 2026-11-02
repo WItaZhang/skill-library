@@ -26,3 +26,8 @@ groups:
         for: 5m
         labels: {severity: warning}
         annotations: {summary: '非 SSE 请求 p95 超过 2 秒'}
+      - alert: SkillLibraryExecutionWorker
+        expr: sum(increase(skill_execution_worker_errors_total[5m])) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: '执行领取或结果落库失败；检查执行 worker 的安全错误码日志'}

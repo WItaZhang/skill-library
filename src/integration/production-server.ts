@@ -59,6 +59,7 @@ export async function createProductionApplication(
   const execution = await options.executionFactory?.({
     pool: options.pool,
     identity,
+    onError: (code) => telemetry.executionFailure(code),
   });
   const admit = createAdmission({ identity, telemetry, ...options.operations });
   let closing = false,

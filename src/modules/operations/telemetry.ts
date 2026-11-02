@@ -69,6 +69,7 @@ export function createTelemetry(sink: LogSink = jsonLog) {
     { count: number; sum: number; buckets: number[] }
   >();
   const limited = new Map<string, number>();
+  const executionFailures = new Map<string, number>();
   const started = Date.now();
   let active = 0,
     sse = 0;
@@ -82,6 +83,16 @@ export function createTelemetry(sink: LogSink = jsonLog) {
   };
   return {
     write,
+    executionFailure(rawCode: string) {
+      const code = [
+        "EXECUTION_WORKER_FAILED",
+        "EXECUTION_FINALIZE_FAILED",
+      ].includes(rawCode)
+        ? rawCode
+        : "EXECUTION_INTERNAL";
+      executionFailures.set(code, (executionFailures.get(code) ?? 0) + 1);
+      write({ event: "execution.worker_error", level: "error", code });
+    },
     begin(req: IncomingMessage, res: ServerResponse, path: string) {
       const requestId = randomUUID(),
         start = performance.now(),
@@ -157,6 +168,11 @@ export function createTelemetry(sink: LogSink = jsonLog) {
         );
       }
       lines.push(
+        "# TYPE skill_execution_worker_errors_total counter",
+        ...[...executionFailures].map(
+          ([code, value]) =>
+            `skill_execution_worker_errors_total{code="${code}"} ${value}`,
+        ),
         "# TYPE skill_rate_limited_total counter",
         ...[...limited].map(
           ([k, v]) => `skill_rate_limited_total{bucket="${k}"} ${v}`,
