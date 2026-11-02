@@ -83,6 +83,7 @@ test(
         await expect(page.getByText("技能已载入，版本已固定。")).toBeVisible();
       } else {
         await expect(page.getByLabel("任务内容")).toBeVisible();
+        page.once("dialog", (dialog) => void dialog.accept());
         // Execution success/retry/version pinning is covered by the required collaboration harness.
       }
       await page

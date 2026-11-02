@@ -6,7 +6,12 @@ import { join } from "node:path";
 import type { IncomingMessage } from "node:http";
 import { loadConfig, secret } from "../config.ts";
 import { WindowLimiter, clientIp, isWrite } from "../rate-limit.ts";
-import { authorizedMetrics, routeLabel, safeErrorCode, createTelemetry } from "../telemetry.ts";
+import {
+  authorizedMetrics,
+  routeLabel,
+  safeErrorCode,
+  createTelemetry,
+} from "../telemetry.ts";
 const env = {
   DATABASE_URL: "postgresql://app:secret@db/app",
   PUBLIC_ORIGIN: "https://skills.example.test",
@@ -90,12 +95,14 @@ test("write classification and metric/error labels are bounded and secret-free",
   assert.equal(authorizedMetrics("Bearer wrong", env.METRICS_TOKEN), false);
 });
 
-
 test("execution worker failure telemetry only emits bounded safety codes", () => {
   const records: unknown[] = [];
-  const telemetry = createTelemetry(record => records.push(record));
+  const telemetry = createTelemetry((record) => records.push(record));
   telemetry.executionFailure("EXECUTION_FINALIZE_FAILED");
   telemetry.executionFailure("DO_NOT_LOG_PROVIDER_SECRET");
   assert.doesNotMatch(JSON.stringify(records), /DO_NOT_LOG/);
-  assert.match(telemetry.render(true, {totalCount: 1, idleCount: 1, waitingCount: 0}), /skill_execution_worker_errors_total\{code="EXECUTION_FINALIZE_FAILED"\} 1/);
+  assert.match(
+    telemetry.render(true, { totalCount: 1, idleCount: 1, waitingCount: 0 }),
+    /skill_execution_worker_errors_total\{code="EXECUTION_FINALIZE_FAILED"\} 1/,
+  );
 });

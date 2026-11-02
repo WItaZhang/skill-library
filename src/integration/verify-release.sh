@@ -6,7 +6,7 @@ cd "$(dirname "$0")/../.."
 sh src/deployment/install.sh
 node -e 'if(Number(process.versions.node.split(".")[0])<24) process.exit(1)'
 # Every phase 4–6 module is required. Missing code or credentials for local dependencies fails CI.
-for module in service runtime broadcast web persistence identity product execution operations; do
+for module in service runtime broadcast web persistence identity product execution operations collaboration; do
   npm run typecheck --prefix "src/modules/$module"
 done
 src/modules/product/node_modules/.bin/tsc -p src/integration/production-tsconfig.json
@@ -22,8 +22,8 @@ npm run build --prefix src/modules/product
 npm run build --prefix src/modules/web
 node --test src/integration/application.test.ts
 (cd src/integration && ../modules/product/node_modules/.bin/vitest run --config vite.test.config.ts)
-node --test src/integration/production.test.ts src/integration/operations.test.ts
+node --test src/integration/production.test.ts src/integration/operations.test.ts src/integration/production-process.test.ts
 # Browser executable selection is explicit in CI, or the harness's local Chrome default.
 node --test src/integration/production.browser.test.ts
-npm test --prefix src/modules/collaboration
+COLLABORATION_PORT="${COLLABORATION_PORT:-18764}" npm test --prefix src/modules/collaboration
 node src/modules/operations/backup-drill.ts
