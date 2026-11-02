@@ -49,7 +49,9 @@ export function createExecutionHttpHandler({
       const chunks: Buffer[] = [];
       for await (const chunk of req) {
         size += chunk.length;
-        if (size > 32768) throw new DomainError("VALIDATION", "任务内容过大");
+        // A 16 KiB prompt may expand sixfold when JSON escapes control characters.
+        // Repository validation still limits the decoded prompt to 16 KiB.
+        if (size > 128 * 1024) throw new DomainError("VALIDATION", "任务内容过大");
         chunks.push(Buffer.from(chunk));
       }
       let input: any;

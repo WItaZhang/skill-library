@@ -1,0 +1,156 @@
+{
+  "date": "2026-11-02",
+  "codeCheckpoint": "1e92c42adec9e24cca7102c98e056c3a60e4a69c",
+  "sources": {
+    "collaboration": "2c081a20c41f7220468c8545a19ec7d65b620ba5",
+    "execution": "403566aad75bdb72f98aa8af54871e6a47a3b972",
+    "operations": "d39ba2facffd30cbb99202e8a77ea317b8a47fab"
+  },
+  "node": "24.22.2",
+  "postgres": "17.11",
+  "tests": 155,
+  "fail": 0,
+  "skip": 0,
+  "releaseLog": "/tmp/skill-456-release.log",
+  "releaseLogSha256": "8da0ecd3d3042d15483b6da82f1ec8fed3250a425e0a1d9bc21c058b7598cbef",
+  "regressionAfterFix": {
+    "tests": 18,
+    "typecheck": "passed",
+    "log": "/tmp/skill-456-execution-final.log"
+  },
+  "backup": {
+    "passed": true,
+    "mode": "full; execution fixture, no external model",
+    "postgres": "17.11 (Homebrew)",
+    "archiveSha256": "147dbe6962a40f2e0d8b9c90dc57e74a7771452d11a0c6afb9ad788abfd7eeb7",
+    "tables": {
+      "audit": {
+        "rows": 7,
+        "sha256": "ce668322572ed4d4229497883e1e9e11826d00551cf9269500cc9d07d4d3c26a"
+      },
+      "auth_identities": {
+        "rows": 2,
+        "sha256": "b7d77e16ba604fd38a2f0284b2dce6114a7033ab9b4f8a5190061236f0022e54"
+      },
+      "auth_sessions": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "draft_previews": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "drafts": {
+        "rows": 3,
+        "sha256": "4933f950a83aff4e4e48ef8cf08282efcc1ab9b225ef77cba461231af805d24b"
+      },
+      "events": {
+        "rows": 2,
+        "sha256": "47170b23f39a0aa6841b4f5480fbb2e23ac931086f63d4515e775d4f2c71fd4c"
+      },
+      "execution_attempts": {
+        "rows": 1,
+        "sha256": "a33449354c3e6b49001662d794251dee642a725acf27cc62452ccc29d6056859"
+      },
+      "execution_receipts": {
+        "rows": 1,
+        "sha256": "8368352a8170c29f8d5b58e12d3fd9ef368c5f082193aa109ccd658a5f66e018"
+      },
+      "execution_requests": {
+        "rows": 1,
+        "sha256": "413ebd786d0f2de540da45f662cb2f92221341970196b6699365e89c3b93928e"
+      },
+      "execution_results": {
+        "rows": 1,
+        "sha256": "ba589b9c8ed26f7c2a66464fc62fa22f9e0e972c68c782bf6e32a15243ef2b9c"
+      },
+      "execution_skills": {
+        "rows": 1,
+        "sha256": "36a4aac747cae5d5ea6e1a0a14e5d68e0074473fa157b558ce80eef6313182ba"
+      },
+      "legacy_imports": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "legacy_records": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "production_migrations": {
+        "rows": 2,
+        "sha256": "b6f9f7b62ad9fdaccae7d977c0e3875a35d24c86fcc93c9c47035b9bcc6abda8"
+      },
+      "proposals": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "requests": {
+        "rows": 2,
+        "sha256": "dedab0ef8df34a94c25de2c483d572766c880e5e5cdccf9c68568ae1557af07c"
+      },
+      "runtime_invocations": {
+        "rows": 1,
+        "sha256": "290e603aecfdc0251e82cc6eafb18c4e86acf5a880836b3166d6a6f1c9c84916"
+      },
+      "runtime_preferences": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "runtime_sessions": {
+        "rows": 2,
+        "sha256": "5736669fd72fc5f316e95b1ae4c2821dcc272484c0920774e690fe368c1069ad"
+      },
+      "runtime_task_versions": {
+        "rows": 2,
+        "sha256": "16ca980af46cc6c5a8854e8360bf2749edb8bfe8c2b3a8843441d7e6d9966df4"
+      },
+      "runtime_tasks": {
+        "rows": 2,
+        "sha256": "0615be3f825a71a7c0ce688fee341158eab96edcc5c02e06286470e85718c2cf"
+      },
+      "skill_maintainers": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "skills": {
+        "rows": 1,
+        "sha256": "1adedeee34491a0024145ca24d7665dc0f9431513d53d1961cac5f03932bcb77"
+      },
+      "team_invitations": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "team_memberships": {
+        "rows": 2,
+        "sha256": "a6e86b9de2f0519fdd2c85e437afe45342b722cd07223d6ac1c2b1408ca70c4b"
+      },
+      "teams": {
+        "rows": 1,
+        "sha256": "cf2f87a1ce08a05b00b033c8389fcb2dee3c257a75877ed78123c58358c2ab79"
+      },
+      "users": {
+        "rows": 2,
+        "sha256": "5257abd173112e96fd329909a07715b38b823fb1a2958a2653ff6e62beb0fe18"
+      },
+      "versions": {
+        "rows": 2,
+        "sha256": "cedb70971aa5a8d59ea15942f428f187f9de8068da5015b0f965428e30c7bd51"
+      },
+      "sequence:events_sequence_seq": {
+        "rows": 1,
+        "sha256": "eeed7c864315e92de4d66125470493f0a5069f811c81751e3a74aff0bcbe429c"
+      },
+      "sequence:runtime_invocations_sequence_seq": {
+        "rows": 1,
+        "sha256": "aa8fa97b2990f7f94f9c6ffbd7a300fb9aacdd30e6449a990ab2c59940d2cea4"
+      }
+    },
+    "dumpMs": 54,
+    "restoreAndVerifyMs": 78,
+    "totalMs": 273,
+    "sourceDatabase": "ops_drill_source_cffc6389539a4919852fa77873d6b0c4",
+    "targetDatabase": "ops_drill_restore_cffc6389539a4919852fa77873d6b0c4",
+    "cleanup": "finally closes pools and drops only these two generated databases"
+  },
+  "externalValidated": false
+}

@@ -104,6 +104,14 @@ test("real HTTP + PG identity cookie/CSRF, injection rejection, owner reads and 
   await f.service.runOnce();
   assert.equal((await client.get(accepted.id)).result?.text, "v1");
   assert.equal((await client.list()).length, 1);
+  // Raw prompt bytes and JSON transport bytes differ for escaped characters.
+  const maximumPrompt = "x" + "\u0001".repeat(16383);
+  const maximum = await client.accept({ ...f.input(), prompt: maximumPrompt });
+  assert.equal((await client.get(maximum.id)).prompt, maximumPrompt);
+  await client.cancel(maximum.id);
+  await assert.rejects(client.accept({ ...f.input(), prompt: maximumPrompt + "x" }), {
+    code: "VALIDATION",
+  });
   forbid = true;
   await assert.rejects(client.accept(f.input("rate limited")), {
     code: "CONFLICT",
