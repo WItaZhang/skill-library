@@ -1,0 +1,9 @@
+✔ 正式任务页 + 真实 HTTP/PG：明确 fixture 提供方的错误/重试/子任务/新版任务；撤权清除结果 (9688.029959ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9947.22575

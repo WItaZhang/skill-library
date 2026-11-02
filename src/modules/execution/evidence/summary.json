@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-01 America/Los_Angeles",
+  "code_sha": "ccb79ad192c25f15853e0046a7bc57f51243ded3",
+  "baseline": "daa1e826a684efac988c5936ddb3fa6acc94310f",
+  "checks": [
+    {
+      "command": "npm test --prefix src",
+      "passed": 59,
+      "skipped": 0
+    },
+    {
+      "command": "DATABASE_URL=... npm test --prefix src/modules/persistence",
+      "passed": 9,
+      "skipped": 0
+    },
+    {
+      "command": "DATABASE_URL=... npm test --prefix src/modules/execution",
+      "passed": 18,
+      "skipped": 0
+    },
+    {
+      "command": "npm run test:ui --prefix src/modules/execution",
+      "passed": 5
+    },
+    {
+      "command": "npm run typecheck --prefix src/modules/execution",
+      "exit": 0
+    },
+    {
+      "command": "npm run typecheck --prefix src/modules/persistence",
+      "exit": 0
+    },
+    {
+      "command": "npm run build --prefix src/modules/product (temporary composed export)",
+      "exit": 0
+    },
+    {
+      "command": "DATABASE_URL=... COLLABORATION_PORT=18759 node --test --test-name-pattern='正式任务页' src/modules/collaboration/collaboration.test.ts (temporary composed export)",
+      "passed": 1,
+      "skipped": 0
+    },
+    {
+      "command": "npm run demo --prefix src/modules/execution (no service secrets)",
+      "exit": 1,
+      "reason": "Required real provider/database/user identifiers absent; no remote call made"
+    }
+  ],
+  "total_passed_tests": 92,
+  "real_provider_verified": false,
+  "model_tests": "Explicit fixture/fake fetch only; actual PG, HTTP, Chrome are real",
+  "dependencies": {
+    "collaboration": "78dd4d08cd936da509568426a01f4d489676fc6d",
+    "operations": "b9ebb9763c430e904da94eb4d3f4cf90c666c43b"
+  },
+  "evidence_note": "This file records observed command results; initial raw module log predates final two additive Node tests and UI back-navigation test. Final browser log names the actual scenario (9.69 seconds) and comes from unmodified fixed dependency source. A prior zero-match filtered run was excluded."
+}
