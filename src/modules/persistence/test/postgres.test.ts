@@ -185,7 +185,7 @@ test('migration detects modified ledger and unknown versions; DDL failure recove
  assert.equal((await pool.query("SELECT to_regclass('production_migrations') AS table_name")).rows[0].table_name,null);
  await pool.query('DROP TABLE users');await migrate(pool);
  await pool.query("UPDATE production_migrations SET checksum='tampered'");await assert.rejects(migrate(pool),/modified/);
- await pool.query('UPDATE production_migrations SET version=99');await assert.rejects(migrate(pool),/Unsupported/);
+ await pool.query('UPDATE production_migrations SET version=99 WHERE version=2');await assert.rejects(migrate(pool),/Unsupported/);
 });
 
 test('independent Node processes serialize publication and durable event order',{skip:!url},async t=>{
@@ -201,4 +201,20 @@ test('independent Node processes serialize publication and durable event order',
  const values=await Promise.all(results);assert.equal(values.filter(v=>v.id).length,1);assert.equal(values.filter(v=>v.code==='STALE_REVISION').length,1);
  const events=await s.listUpdateEvents(a,0);assert.equal(events.length,2);assert.ok(events[1].sequence>events[0].sequence);
  assert.equal((await s.getSkill(a,skill.id)).currentVersionId,events[1].versionId);
+});
+
+test('001 to 002 upgrade preserves populated immutable versions and task snapshot', {skip:!url}, async t=>{
+ const {readFile}=await import('node:fs/promises');const {createHash}=await import('node:crypto');
+ const root=new pg.Pool({connectionString:url});const schema='upgrade_'+randomUUID().replaceAll('-','');await root.query(`CREATE SCHEMA ${schema}`);
+ const pool=new pg.Pool({connectionString:url,options:`-c search_path=${schema}`});t.after(async()=>{await pool.end();await root.query(`DROP SCHEMA ${schema} CASCADE`);await root.end()});
+ const sql=await readFile(new URL('../migrations/001-production.sql',import.meta.url),'utf8');
+ await pool.query(sql);await pool.query('CREATE TABLE production_migrations(version integer PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
+ await pool.query('INSERT INTO production_migrations(version,checksum) VALUES(1,$1)',[createHash('sha256').update(sql).digest('hex')]);
+ const actor:Actor={teamId:randomUUID(),userId:randomUUID(),role:'admin'};
+ await pool.query('INSERT INTO users(id,display_name) VALUES($1,$2)',[actor.userId,'upgrade']);await pool.query('INSERT INTO teams(id,name) VALUES($1,$2)',[actor.teamId,'upgrade']);await pool.query("INSERT INTO team_memberships(team_id,user_id,role) VALUES($1,$2,'admin')",[actor.teamId,actor.userId]);
+ const library=createPostgresLibraryService({pool});const {draft}=await library.createSkill(actor,{name:'prior version',description:'',maintainerIds:[],content:content('original')});
+ const version=await library.publishDraft(actor,publish(draft));const {createPostgresRuntimeService}=await import('../runtime.ts');const runtime=createPostgresRuntimeService({pool});
+ const session=await runtime.createSession(actor);const task=await runtime.createTask(actor,session.id,randomUUID());
+ await migrate(pool);assert.deepEqual(await runtime.getTask(actor,task.taskId),task);assert.deepEqual(await library.getVersion(actor,version.id),version);
+ assert.deepEqual((await pool.query('SELECT version FROM production_migrations ORDER BY version')).rows.map(r=>r.version),[1,2]);
 });

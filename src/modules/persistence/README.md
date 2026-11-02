@@ -1,6 +1,6 @@
 # PostgreSQL persistence
 
-共享契约：`src/contracts/production.ts`。唯一 DDL：`migrations/001-production.sql`。Node >=24，PostgreSQL 17+。
+共享契约：`src/contracts/production.ts`。统一 DDL：`migrations/001-production.sql` 与新增 `002-execution.sql`，共用迁移 ledger。Node >=24，PostgreSQL 17+。
 
 ```ts
 import pg from 'pg';
@@ -69,3 +69,12 @@ DATABASE_URL=postgresql://skill_library@127.0.0.1:55432/skill_library_test npm t
 开发期间共享测试实例位于 `/tmp/skill-library-pg-production/data`，loopback 55432，用户 skill_library，无密码；保留供 identity/product 验证。全部工作结束后可用 `/opt/homebrew/opt/postgresql@17/bin/pg_ctl -D /tmp/skill-library-pg-production/data -m fast stop` 停止。未注册开机服务。
 
 另提供 compose.yaml（仅临时测试 tmpfs）；本机没有 Docker，Compose 未执行。真实验收使用本地 PostgreSQL 17.11，不是 mock。
+
+
+## 执行增量（002）
+
+002 不修改 001，不改旧任务快照。新增 execution_requests、execution_skills、execution_attempts、execution_results、execution_receipts；team/task/session/owner/attempt/status/provider/model/request id/error/timestamps 均为显式列，文本结果、prompt 也是普通列，仅提供方元数据 JSONB。复合 FK 阻止跨团队、跨任务或不同 session owner 关联；结果、技能选择、回执不可改写。
+
+createStore 的 AsyncLocalStorage 现在按同一 Pool 共享：外层 execution 接受事务中的 RuntimeService 创建会话/任务直接加入此事务，不再单独 COMMIT。嵌套调用必须同 user/team 且不能从只读升级写入；外层负责唯一提交与回滚，团队 advisory lock 和身份行锁仍按旧顺序持有。只有数据库操作进入此范围，外部提供方调用严格在事务提交以后。旧 RuntimeService 工厂/接口保持兼容。
+
+状态机、领取租约、取消和不确定调用处理详见 [execution README](../execution/README.md)。升级测试实际从有版本/任务的 001 数据库迁移到 002，核对旧内容/快照完全不变。
