@@ -1,0 +1,25 @@
+{
+  "name": "@skill-library/persistence",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "migrate": "node migrate-cli.ts"
+  },
+  "dependencies": {
+    "diff": "^8.0.4",
+    "markdown-it": "^14.3.3",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": "./index.ts"
+}
