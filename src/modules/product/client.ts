@@ -26,6 +26,25 @@ export function createProductScope(options: {
   const controller = new AbortController();
   let active = true;
   const subscriptions = new Set<() => void>();
+  function dispose() {
+    if (!active) return;
+    active = false;
+    controller.abort();
+    for (const stop of subscriptions) stop();
+    if (typeof sessionStorage !== "undefined")
+      for (const key of Object.keys(sessionStorage)) {
+        if (key.startsWith(`skill-draft:${options.actor.teamId}:${options.actor.userId}:`) ||
+          key === `skill-library:session:${options.actor.teamId}:${options.actor.userId}`)
+          sessionStorage.removeItem(key);
+      }
+  }
+  function forbidden() {
+    if (!active) return;
+    // Invalidate synchronously: React unmount happens later and other responses
+    // may already be queued in this event-loop turn.
+    dispose();
+    options.onForbidden();
+  }
   const assertActive = () => {
     if (!active)
       throw new DomainError("FORBIDDEN", "登录身份已变化，请重新打开技能。");
@@ -38,11 +57,11 @@ export function createProductScope(options: {
     const response = await (options.fetch ?? fetch)(url, {
       ...init,
       headers,
-      signal: controller.signal,
+      signal: init?.signal ? AbortSignal.any([controller.signal, init.signal]) : controller.signal,
     });
     assertActive();
     if (response.status === 401 || response.status === 403)
-      options.onForbidden();
+      forbidden();
     return response;
   };
   const base = (options.baseUrl ?? "").replace(/\/$/, "");
@@ -132,6 +151,30 @@ export function createProductScope(options: {
     baseUrl: base,
     EventSource: TeamEvents,
   });
+  let checkingAccess: Promise<void> | undefined;
+  function verifyAccess() {
+    // Native EventSource does not expose HTTP status on a failed handshake.
+    // Recheck authority after errors/reconnects, including revocation while offline.
+    if (checkingAccess || !active) return checkingAccess;
+    checkingAccess = (async () => {
+      try {
+        const sessionResponse = await scopedFetch(`${base}/api/identity/session`, { credentials: "same-origin" });
+        const session = (await sessionResponse.json()).data;
+        if (!active) return;
+        if (!session || session.user.id !== options.actor.userId || session.csrfToken !== options.csrfToken) {
+          forbidden(); return;
+        }
+        const response = await scopedFetch(`${base}/api/identity/listTeams`, {
+          method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}",
+        });
+        if (!response.ok) return;
+        const teams = (await response.json()).data;
+        if (active && !teams.some((team: { id: string; role: string }) => team.id === options.actor.teamId && team.role === options.actor.role)) forbidden();
+      } catch { /* Offline input stays in memory; authority is checked again on reconnect. */ }
+      finally { checkingAccess = undefined; }
+    })();
+    return checkingAccess;
+  }
   const updateSource: SkillUpdateSource = {
     subscribe(actor, handlers) {
       assertActive();
@@ -140,10 +183,18 @@ export function createProductScope(options: {
           if (active) handlers.onUpdate(event);
         },
         onReconnect: () => {
-          if (active) handlers.onReconnect();
+          if (active) {
+            void verifyAccess();
+            handlers.onReconnect();
+          }
         },
         onError: (error) => {
-          if (active) handlers.onError?.(error);
+          if (!active) return;
+          if (error instanceof DomainError && error.code === "FORBIDDEN") {
+            forbidden(); return;
+          }
+          void verifyAccess();
+          handlers.onError?.(error);
         },
       });
       const stop = () => {
@@ -158,22 +209,6 @@ export function createProductScope(options: {
     library: guardedLibrary,
     runtime,
     updateSource,
-    dispose() {
-      active = false;
-      controller.abort();
-      for (const stop of subscriptions) stop();
-      // The reused editor stores draft IDs only, scoped by user and team. Remove on session exit too.
-      if (typeof sessionStorage !== "undefined")
-        for (const key of Object.keys(sessionStorage)) {
-          if (
-            key.startsWith(
-              `skill-draft:${options.actor.teamId}:${options.actor.userId}:`,
-            ) ||
-            key ===
-              `skill-library:session:${options.actor.teamId}:${options.actor.userId}`
-          )
-            sessionStorage.removeItem(key);
-        }
-    },
+    dispose,
   };
 }

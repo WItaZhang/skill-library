@@ -148,7 +148,13 @@ export function createLibraryHttpHandler(options: HttpHandlerOptions): LibraryHt
         const code = error instanceof DomainError && isCode(error.code) ? error.code : 'UNAVAILABLE';
         res.writeHead(status[code], { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify({ error: { code, message: error instanceof DomainError ? userMessage(error.message, code) : messages[code], details: error instanceof DomainError ? safeDetails(error.details) : undefined } }));
-      } else if (!res.writableEnded) res.destroy();
+      } else if (!res.writableEnded) {
+        if (error instanceof DomainError && error.code === 'FORBIDDEN' && res.getHeader('Content-Type') === 'text/event-stream; charset=utf-8' && !res.destroyed) {
+          // No business payload after authority changes. Let the browser distinguish
+          // revocation from a recoverable network outage, then stop reconnecting.
+          res.end('event: access.revoked\ndata: {"code":"FORBIDDEN"}\n\n');
+        } else res.destroy();
+      }
     } finally { connections.delete(abort); res.off('close', stop); abort.signal.removeEventListener('abort', terminate); abort.abort(); }
   }
   const handler = ((req, res) => { void run(req, res); }) as LibraryHttpHandler;

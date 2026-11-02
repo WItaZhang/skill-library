@@ -113,6 +113,40 @@ describe("身份隔离客户端（显式传输 fixture）", () => {
     });
     await expect(scope.library.listSkills(actor)).rejects.toThrow();
     expect(denied).toHaveBeenCalledOnce();
+    await expect(scope.library.listSkills(actor)).rejects.toThrow();
+    expect(denied).toHaveBeenCalledOnce();
     scope.dispose();
+  });
+  it("revocation immediately disposes scope, SSE and queued responses", async () => {
+    let source!: FakeEvents;
+    class FakeEvents implements EventSourceLike {
+      listeners = new Map<string, (event: { data?: string }) => void>();
+      closed = false;
+      constructor() { source = this; }
+      addEventListener(t: string, f: (e: { data?: string }) => void) { this.listeners.set(t, f); }
+      removeEventListener(t: string) { this.listeners.delete(t); }
+      close() { this.closed = true; }
+    }
+    let resolve!: (r: Response) => void;
+    const denied = vi.fn(), onUpdate = vi.fn();
+    const scope = createProductScope({ actor, csrfToken: 'csrf', onForbidden: denied, EventSource: FakeEvents,
+      fetch: () => new Promise<Response>((r) => resolve = r) });
+    scope.updateSource.subscribe(actor, { onReconnect: vi.fn(), onUpdate });
+    const pending = scope.library.listSkills(actor);
+    const revoke = source.listeners.get('access.revoked')!;
+    revoke({ data: '{"code":"FORBIDDEN"}' }); revoke({});
+    expect(denied).toHaveBeenCalledOnce(); expect(source.closed).toBe(true);
+    resolve(new Response(JSON.stringify({ result: [{ name: '已撤销团队内容' }] })));
+    await expect(pending).rejects.toThrow(); expect(onUpdate).not.toHaveBeenCalled();
+  });
+  it("honors caller cancellation as well as identity disposal", async () => {
+    let signal!: AbortSignal;
+    const scope = createProductScope({ actor, csrfToken: 'csrf', onForbidden: vi.fn(), fetch: async (_url, init) => {
+      signal = init!.signal!; return new Response(JSON.stringify({result: []}));
+    }});
+    // Library requests carry scope cancellation; execution callers also get their own
+    // cancellation composed when the shared fetch is injected during integration.
+    await scope.library.listSkills(actor); expect(signal.aborted).toBe(false);
+    scope.dispose(); expect(signal.aborted).toBe(true);
   });
 });

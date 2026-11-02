@@ -288,15 +288,18 @@ export function ProductEditor({
           JSON.stringify({ ...input, idempotencyKey: "" }))
     )
       publishRequest.current = input;
+    const submitted = publishRequest.current!;
     await action.run(async () => {
       try {
-        const v = await library.publishDraft(actor, publishRequest.current!);
+        const v = await library.publishDraft(actor, submitted);
         const next = await library.getDraft(actor, draft.id);
         setDraft(next);
         setCurrent(v.id);
         setPublished(`v${v.number} 已自动生效`);
         onSubmitted();
-        setSummary((value) => (value === summary ? "" : value));
+        // An exact retry may complete an earlier publication while the author has
+        // already written the next change summary. Only clear the submitted one.
+        setSummary((value) => (value === submitted.changeSummary ? "" : value));
         requestKey.current = key();
         publishRequest.current = undefined;
         setRetryPublish(false);
