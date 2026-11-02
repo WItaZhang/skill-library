@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: skill_library
+      POSTGRES_PASSWORD: local-test-only
+      POSTGRES_DB: skill_library_test
+    ports:
+      - "127.0.0.1:55439:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skill_library -d skill_library_test"]
+      interval: 2s
+      retries: 20
