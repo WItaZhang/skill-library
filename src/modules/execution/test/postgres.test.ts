@@ -1,5 +1,5 @@
 import test from "node:test";
-import {once} from "node:events";
+import { once } from "node:events";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { fixture, fixtureProvider, deferred } from "./helpers.ts";
@@ -421,5 +421,36 @@ test("shutdown during resource preparation never dispatches and has no unhandled
     (await f.pool.query("SELECT count(*) FROM execution_results")).rows[0]
       .count,
     "0",
+  );
+});
+
+test("simultaneous independent Pool claims use one fencing token and one attempt", async (t) => {
+  const { default: pg } = await import("pg");
+  const f = await fixture(t);
+  const secondPool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    options: `-c search_path=${f.schema}`,
+  });
+  t.after(() => secondPool.end());
+  const r = await f.service.accept(f.a, f.input());
+  const repos = [f.pool, secondPool].map((pool) =>
+    createExecutionRepository({
+      pool,
+      provider: fixtureProvider.name,
+      model: fixtureProvider.model,
+      maxAttempts: 3,
+      leaseMs: 1000,
+    }),
+  );
+  const claims = await Promise.all(repos.map((repo) => repo.claim(r.id)));
+  assert.equal(claims.filter(Boolean).length, 1);
+  assert.equal(
+    (
+      await f.pool.query(
+        "SELECT count(*) FROM execution_attempts WHERE execution_id=$1",
+        [r.id],
+      )
+    ).rows[0].count,
+    "1",
   );
 });
