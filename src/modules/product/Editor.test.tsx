@@ -1,0 +1,74 @@
+import "@testing-library/jest-dom/vitest";
+import React from "react";
+import { afterEach, it, expect, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { ProductEditor } from "./Editor";
+import { createProductFixture } from "./fixture";
+import type { SkillUpdateSource } from "../../contracts";
+afterEach(() => {
+  cleanup();
+  sessionStorage.clear();
+});
+it("ProductEditor coalesces duplicate/out-of-order transport scheduling without changing input (explicit fixture)", async () => {
+  const f = await createProductFixture();
+  const skill = await f.library.getSkill(f.actor, "research");
+  let handlers!: Parameters<SkillUpdateSource["subscribe"]>[1];
+  const stop = vi.fn();
+  const source: SkillUpdateSource = {
+    subscribe: (_a, h) => {
+      handlers = h;
+      return stop;
+    },
+  };
+  const get = vi.spyOn(f.library, "getSkill");
+  const view = render(
+    <ProductEditor
+      actor={f.actor}
+      library={f.library}
+      skill={skill}
+      updateSource={source}
+      onDirty={() => {}}
+      onSubmitted={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  const input = await screen.findByLabelText("SKILL.md");
+  fireEvent.change(input, { target: { value: "# 必须保留的输入" } });
+  await f.simulatePublication("research");
+  await f.simulatePublication("research");
+  const events = await f.library.listUpdateEvents(f.actor, 0);
+  const latest = events.at(-1)!,
+    older = events.at(-2)!;
+  const count = get.mock.calls.length;
+  act(() => {
+    handlers.onUpdate({ ...latest, teamId: "foreign" });
+    handlers.onUpdate({ ...latest, skillId: "other" });
+  });
+  expect(get).toHaveBeenCalledTimes(count);
+  act(() => {
+    handlers.onReconnect();
+    handlers.onUpdate(latest);
+    handlers.onUpdate(latest);
+    handlers.onUpdate(older);
+  });
+  await screen.findByText(/此技能已有新版本/);
+  expect(screen.getAllByText(/此技能已有新版本/)).toHaveLength(1);
+  expect(input).toHaveValue("# 必须保留的输入");
+  fireEvent.click(screen.getByRole("button", { name: "重新比较并查看更新" }));
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("我已检查最终内容，确认同步草稿基线"),
+    ).toBeEnabled(),
+  );
+  const current = await f.library.getSkill(f.actor, skill.id);
+  expect(current.currentVersionId).toBe(latest.versionId);
+  view.unmount();
+  expect(stop).toHaveBeenCalledOnce();
+});

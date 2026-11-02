@@ -42,3 +42,9 @@ A connection stays bound to its original authenticated user/team/role; revocatio
 `createSseSkillUpdateSource({baseUrl?, afterSequence?, EventSource?})` returns shared `SkillUpdateSource`. Native browser EventSource uses host cookies (`withCredentials: true`), reconnects automatically, and sends Last-Event-ID. Injectable constructor supports test environments. `onReconnect` fires on **every** successful `open`, including initial connection; callers must requery current version. The source parses typed publication events and filters by the supplied actor's team, but Actor is only local context, never server authentication. Events do not mutate drafts. Duplicate/late event reconciliation remains the consumer's responsibility. Unsubscribe closes the connection, removes listeners and guards queued callbacks. Remount without a cursor replays from zero; callers may provide a persisted `afterSequence`, and should always reconcile authoritative state on open.
 
 The host owns database retention and capacity limits. This scoped adapter does not add notification subscriptions, external notifications, session version switching, a production identity provider or an Agent execution adapter.
+# 权限失效控制信号（production phase 4）
+
+SSE 每轮及每个发布事件发送前重新验证用户、团队和角色。已建立连接发现 FORBIDDEN 时先发送 `event: access.revoked` / `data: {"code":"FORBIDDEN"}` 后结束连接，不再发送业务内容。浏览器适配器关闭 EventSource 并向 `onError` 传 DomainError FORBIDDEN；宿主产品应同步销毁旧 scope。此事件仅为连接权限控制，不是技能更新通知，不写持久发布事件。
+
+网络错误仍传 UNAVAILABLE 并允许原生重连。初始握手拒绝没有 SSE 控制帧，产品在 error/reconnect 时使用身份 HTTP 核对权限；服务暂不可用不得当成注销。原工厂签名与 SkillUpdateSource 契约保持兼容。
+

@@ -1,0 +1,37 @@
+rule_files: [alerts.yml]
+evaluation_interval: 15s
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'up{job="skill-library"}'
+        values: '0x12'
+      - series: 'skill_ready'
+        values: '0x12'
+      - series: 'skill_pg_waiting_requests'
+        values: '2x12'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SkillLibraryDown
+        exp_alerts:
+          - exp_labels: {job: skill-library, severity: critical}
+            exp_annotations: {summary: '应用指标抓取失败；检查容器、密钥和启动日志'}
+      - eval_time: 2m
+        alertname: SkillLibraryNotReady
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations: {summary: '应用未就绪；检查 PostgreSQL 与迁移日志'}
+      - eval_time: 3m
+        alertname: SkillLibraryDatabaseQueue
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations: {summary: '数据库连接等待持续；检查慢事务与连接预算'}
+  - interval: 15s
+    input_series:
+      - series: 'skill_http_requests_total{status="503",route="execution"}'
+        values: '0+2x40'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: SkillLibraryErrors
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations: {summary: '持续服务错误；按 requestId 与时间定位结构化错误日志'}

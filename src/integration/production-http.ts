@@ -20,6 +20,11 @@ export function createProductionLibraryHandler(options: {
     ...options,
     allowedOrigins: [options.publicOrigin],
   });
+  // Separate SSE lifecycle so shutdown drains in-flight RPC writes before closing them.
+  const events = createLibraryHttpHandler({
+    ...options,
+    allowedOrigins: [options.publicOrigin],
+  });
   const service = options.library;
   const routes = new Map<
     string,
@@ -160,7 +165,7 @@ export function createProductionLibraryHandler(options: {
         !path.startsWith("/api/management/") &&
         !path.startsWith("/api/runtime/")
       ) {
-        legacy(req, res);
+        (path === "/api/events" ? events : legacy)(req, res);
         return true;
       }
       const route = path.startsWith("/api/runtime/")
@@ -211,5 +216,12 @@ export function createProductionLibraryHandler(options: {
     }
     return true;
   }
-  return { handle, close: () => legacy.close() };
+  return {
+    handle,
+    closeEvents: () => events.close(),
+    close: () => {
+      events.close();
+      legacy.close();
+    },
+  };
 }

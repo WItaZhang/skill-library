@@ -1,0 +1,118 @@
+name: skill-library
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+    secrets: [postgres_admin_password, app_db_password]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-skill-library.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '5'}
+  app:
+    image: skill-library:${RELEASE_SHA:?Set RELEASE_SHA}
+    build:
+      context: ../..
+      dockerfile: src/deployment/Dockerfile
+      args: {RELEASE_SHA: '${RELEASE_SHA:?Set RELEASE_SHA}'}
+    restart: unless-stopped
+    init: true
+    user: '1000:1000'
+    read_only: true
+    tmpfs: ['/tmp:size=16m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 25s
+    environment:
+      NODE_ENV: production
+      PORT: '8080'
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set HTTPS PUBLIC_ORIGIN}
+      DATABASE_URL_FILE: /run/secrets/database_url
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:?Set GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET_FILE: /run/secrets/github_client_secret
+      METRICS_TOKEN_FILE: /run/secrets/metrics_token
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+      EXECUTION_ENABLED: ${EXECUTION_ENABLED:-false}
+      EXECUTION_MODEL: ${EXECUTION_MODEL:-}
+      ANTHROPIC_WORKSPACE_ID: ${ANTHROPIC_WORKSPACE_ID:-}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IP:-172.29.46.2}
+      SHUTDOWN_TIMEOUT_MS: '20000'
+      PG_POOL_MAX: '10'
+    secrets: [database_url, github_client_secret, metrics_token, anthropic_api_key]
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [backend]
+    logging: *logging
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app: {condition: service_healthy}
+    networks:
+      backend:
+        ipv4_address: ${TRUSTED_PROXY_IP:-172.29.46.2}
+    logging: *logging
+  prometheus:
+    image: prom/prometheus:v3.13.5
+    restart: unless-stopped
+    command: ['--config.file=/etc/prometheus/prometheus.yml', '--storage.tsdb.retention.time=15d']
+    ports: ['127.0.0.1:9090:9090']
+    secrets: [metrics_token]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - metrics_data:/prometheus
+    networks: [backend]
+    logging: *logging
+  backup:
+    image: postgres:17-bookworm
+    profiles: [tools]
+    entrypoint: ['/bin/sh', '/ops/backup.sh']
+    environment: {PGHOST: db, PGPORT: '5432', PGUSER: skill_library, PGDATABASE: skill_library}
+    secrets: [app_db_password]
+    volumes: ['./backup.sh:/ops/backup.sh:ro', './backups:/backups']
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [backend]
+    logging: *logging
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: ${APP_NETWORK_SUBNET:-172.29.46.0/24}
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
+  metrics_data:
+secrets:
+  postgres_admin_password:
+    file: ${SECRETS_DIR:-./secrets}/postgres_admin_password
+  app_db_password:
+    file: ${SECRETS_DIR:-./secrets}/app_db_password
+  database_url:
+    file: ${SECRETS_DIR:-./secrets}/database_url
+  github_client_secret:
+    file: ${SECRETS_DIR:-./secrets}/github_client_secret
+  metrics_token:
+    file: ${SECRETS_DIR:-./secrets}/metrics_token
+  anthropic_api_key:
+    file: ${SECRETS_DIR:-./secrets}/anthropic_api_key

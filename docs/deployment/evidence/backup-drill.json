@@ -1,0 +1,134 @@
+{
+  "passed": true,
+  "mode": "full; execution fixture, no external model",
+  "postgres": "17.11 (Homebrew)",
+  "archiveSha256": "e4dffefa58a05bbe246814e719ad887ac5d03076393db566e384129dccd07bbb",
+  "tables": {
+    "audit": {
+      "rows": 7,
+      "sha256": "770b01f2844575c7062871d07afcc58f9aa6009247b8460b865356d137007cb6"
+    },
+    "auth_identities": {
+      "rows": 2,
+      "sha256": "54701738bb1bd60bc3ff3e1d752563317a850547518b8a01b7ad1cd31159bc47"
+    },
+    "auth_sessions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "draft_previews": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "drafts": {
+      "rows": 3,
+      "sha256": "afc98ee3536e8f5b3dbe28ebbf49e69589afc1fc2a4fecdd948a8935247c7af5"
+    },
+    "events": {
+      "rows": 2,
+      "sha256": "97168ec2bce7800fcd5ba846c8a3869dc9480a48013b7e23291bcd19dba763b2"
+    },
+    "execution_attempts": {
+      "rows": 1,
+      "sha256": "2f5edbafbbf870d636c9dc971ff19d878b1736e88e19a3d742be01ca0a5f9094"
+    },
+    "execution_receipts": {
+      "rows": 1,
+      "sha256": "c52449d2f672ea86c33056a7594f1a69bea8a6bf9c1a6275f3776edb2e77fd55"
+    },
+    "execution_requests": {
+      "rows": 1,
+      "sha256": "8035a8e6a3b1bcf8de19812e1cb79875cf1b84ccdaeed6395d9d7fd04b9f4189"
+    },
+    "execution_results": {
+      "rows": 1,
+      "sha256": "c85a1b56b08ac7bb12d585fee165903b1c68c2b0a0150fc86f9790129445fdf3"
+    },
+    "execution_skills": {
+      "rows": 1,
+      "sha256": "76ecc4478e2348da8714778dba2cdda604bff13ed07767c08c43b023c7bdd93f"
+    },
+    "legacy_imports": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "legacy_records": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production_migrations": {
+      "rows": 2,
+      "sha256": "b9dda599eb842f62a5eb3b884fcc38e58078360292c63bdb5022e5b573b1bcfb"
+    },
+    "proposals": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "requests": {
+      "rows": 2,
+      "sha256": "ef5b59f84d026b4337e379f3b8c131ae20b50b340945dde748707d9f26928a24"
+    },
+    "runtime_invocations": {
+      "rows": 1,
+      "sha256": "f1dd6eae20350c9404d7fddfcafd2899d6c32dbacc37735fb41504b543aba8ae"
+    },
+    "runtime_preferences": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime_sessions": {
+      "rows": 2,
+      "sha256": "9476a5c7380566b65d94f667b3e877e8a32441988074b82fdcad9448d93de78a"
+    },
+    "runtime_task_versions": {
+      "rows": 2,
+      "sha256": "e752cfa7fdc111a089d240e599f2958318b79c5594f7126f7e0bda68f80fedad"
+    },
+    "runtime_tasks": {
+      "rows": 2,
+      "sha256": "c7bb674ba250604374720530283da393f23a73ba6f5e7fb2bad5e6a6f9a9b021"
+    },
+    "skill_maintainers": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "skills": {
+      "rows": 1,
+      "sha256": "11c530faedda91e877dee5f1c43757806ff5baae477a4b258ab9a6308000c5ac"
+    },
+    "team_invitations": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "team_memberships": {
+      "rows": 2,
+      "sha256": "3d7da574dcd921d8c016755ba6df0fdbce8bb9a871bf0ac866c091c113118b31"
+    },
+    "teams": {
+      "rows": 1,
+      "sha256": "2642fa3734414e6b0dd4613e8569d33df3d7461252398c0ab0d3757f8c6d7a34"
+    },
+    "users": {
+      "rows": 2,
+      "sha256": "28affb83a2f955b7c294ced07cbe93bc5d46f7d26d8fc83a24f1264c705302a3"
+    },
+    "versions": {
+      "rows": 2,
+      "sha256": "0fb17f80ef17aad56ba25201e38ebedf3fa5c12b39b31cfd5965b3a84fbdc889"
+    },
+    "sequence:events_sequence_seq": {
+      "rows": 1,
+      "sha256": "eeed7c864315e92de4d66125470493f0a5069f811c81751e3a74aff0bcbe429c"
+    },
+    "sequence:runtime_invocations_sequence_seq": {
+      "rows": 1,
+      "sha256": "aa8fa97b2990f7f94f9c6ffbd7a300fb9aacdd30e6449a990ab2c59940d2cea4"
+    }
+  },
+  "dumpMs": 53,
+  "restoreAndVerifyMs": 72,
+  "totalMs": 271,
+  "sourceDatabase": "ops_drill_source_38d61cde90534d4bb95508bae2c9dd03",
+  "targetDatabase": "ops_drill_restore_38d61cde90534d4bb95508bae2c9dd03",
+  "cleanup": "finally closes pools and drops only these two generated databases"
+}

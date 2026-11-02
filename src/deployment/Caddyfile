@@ -1,0 +1,21 @@
+{
+	admin off
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request delete
+			}
+		}
+	}
+}
+{$APP_DOMAIN} {
+	# No access log: callback query strings and invitation URLs are credentials.
+	@private path /metrics
+	respond @private 404
+	reverse_proxy app:8080 {
+		# Direct Internet -> Caddy only. Do not preserve client-supplied forwarding chains.
+		header_up X-Forwarded-For {remote_host}
+		flush_interval -1
+	}
+}

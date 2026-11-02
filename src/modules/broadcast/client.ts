@@ -63,12 +63,22 @@ export function createSseSkillUpdateSource(options: SseClientOptions = {}): Skil
       if (!isUpdate(event)) { error(); return; }
       if (event.teamId === actor.teamId) handlers.onUpdate(event);
     };
-    source.addEventListener('open', open); source.addEventListener('error', error); source.addEventListener('skill.updated', update);
-    return () => {
-      if (!active) return;
+    const stop = () => {
       active = false;
       source.removeEventListener('open', open); source.removeEventListener('error', error); source.removeEventListener('skill.updated', update);
+      source.removeEventListener('access.revoked', revoked);
       source.close();
+    };
+    const revoked = () => {
+      if (!active) return;
+      stop();
+      handlers.onError?.(new DomainError('FORBIDDEN', messages.FORBIDDEN));
+    };
+    source.addEventListener('open', open); source.addEventListener('error', error); source.addEventListener('skill.updated', update);
+    source.addEventListener('access.revoked', revoked);
+    return () => {
+      if (!active) return;
+      stop();
     };
   } };
 }

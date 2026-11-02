@@ -14,7 +14,6 @@ import type {
 import { ProductionProduct } from "./Product";
 import { createProductScope } from "./client";
 import "./product.css";
-import { useLoad, LoadState } from "../web/ui";
 
 export function App({ identityClient }: { identityClient?: IdentityClient }) {
   const rawClient = useMemo(
@@ -47,6 +46,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
         if (!permit()) throw new Error("已取消退出，输入仍保留。");
         await rawClient.logout();
         reset();
+        sessionRef.current = null;
         setSession(null);
       },
     }),
@@ -82,6 +82,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
         next.csrfToken !== session.csrfToken
       ) {
         reset();
+        sessionRef.current = next;
         setSession(next);
         setNotice("登录状态已变化，请重新选择团队。");
         return;
@@ -96,7 +97,8 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
         }
       }
     } catch {
-      setNotice("暂时无法核对登录状态，请检查连接。");
+      if (started === epoch.current)
+        setNotice("暂时无法核对登录状态，请检查连接。");
     }
   }, [rawClient, session, team, reset]);
   useEffect(() => {
@@ -111,11 +113,20 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
   }, [session, validate]);
   const forbidden = useCallback(() => {
     reset();
+    const started = epoch.current;
     setNotice("访问权限已失效，请重新登录或选择有权限的团队。");
     void rawClient
       .session()
-      .then(setSession)
-      .catch(() => setSession(null));
+      .then((next) => {
+        if (started !== epoch.current) return;
+        sessionRef.current = next;
+        setSession(next);
+      })
+      .catch(() => {
+        if (started !== epoch.current) return;
+        sessionRef.current = null;
+        setSession(null);
+      });
   }, [rawClient, reset]);
   const identity = (
     <IdentityPanel client={client} onSessionChange={sessionChanged} />
@@ -216,27 +227,25 @@ function Workspace({
   );
   useEffect(() => {
     scopeRef.current = scope;
+    // Keep the identity authority stream alive on lists and task pages too.
+    const stop = scope.updateSource.subscribe(actor, {
+      onUpdate() {},
+      onReconnect() {},
+    });
     return () => {
+      stop();
       scope.dispose();
       if (scopeRef.current === scope) scopeRef.current = null;
     };
-  }, [scope, scopeRef]);
-  const loaded = useLoad(
-    useCallback(() => scope.runtime.createSession(actor), [scope, actor]),
-  );
+  }, [scope, scopeRef, actor]);
   return (
-    <LoadState {...loaded} retry={loaded.reload}>
-      {loaded.data && (
-        <ProductionProduct
-          actor={actor}
-          runtime={scope.runtime}
-          initialSessionId={loaded.data.id}
-          library={scope.library}
-          updateSource={scope.updateSource}
-          identityPanel={identityPanel}
-          onDirtyChange={onDirty}
-        />
-      )}
-    </LoadState>
+    <ProductionProduct
+      actor={actor}
+      execution={scope.execution}
+      library={scope.library}
+      updateSource={scope.updateSource}
+      identityPanel={identityPanel}
+      onDirtyChange={onDirty}
+    />
   );
 }

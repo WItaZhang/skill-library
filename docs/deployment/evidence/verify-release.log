@@ -1,0 +1,676 @@
+
+added 18 packages in 611ms
+npm warn install-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 3 packages in 166ms
+
+added 3 packages in 167ms
+
+added 106 packages in 585ms
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 29 packages in 220ms
+
+added 93 packages in 706ms
+npm warn install-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 124 packages in 600ms
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 110 packages in 507ms
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 18 packages in 183ms
+
+added 21 packages in 224ms
+
+> @skill-library/service@0.1.0 typecheck
+> tsc --noEmit
+
+
+> @skill-library/runtime@0.1.0 typecheck
+> tsc --noEmit
+
+
+> @skill-library/broadcast@2.0.0 typecheck
+> tsc --noEmit
+
+
+> @skill-library/web@0.1.0 typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> @skill-library/product@0.1.0 typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> test
+> npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web && npm run test:broadcast && npm run test:publication
+
+
+> test:contracts
+> node --experimental-strip-types --test contracts/*.test.ts
+
+✔ domain errors retain machine-readable concurrency information (0.499959ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 64.577084
+
+> test:service
+> npm --prefix modules/service test
+
+
+> @skill-library/service@0.1.0 test
+> node --import tsx --test test/*.test.ts
+
+✔ single author publishes atomically; exact replay survives later draft edits and restart; legacy paths absent (12.016916ms)
+✔ stale nonoverlap rejects; preview uses unsaved immutable snapshot; explicit apply and replay have no events (5.99525ms)
+✔ tokens reject tampering, other drafts/users/teams, newer target and changed saved revision (5.259375ms)
+✔ incomplete drafts persist, publish fully validates; structure/script/member/role protections remain (5.082791ms)
+✔ publication rollback at after_version leaves all durable state unchanged (5.037583ms)
+✔ publication rollback at after_pointer leaves all durable state unchanged (4.765375ms)
+✔ publication rollback at after_draft leaves all durable state unchanged (4.809292ms)
+✔ publication rollback at after_event leaves all durable state unchanged (4.424083ms)
+✔ publication rollback at after_audit leaves all durable state unchanged (4.845042ms)
+✔ publication rollback at after_request leaves all durable state unchanged (4.379208ms)
+✔ two independent processes concurrently publish one success; replay across processes stays singular (170.655917ms)
+✔ v1 database upgrade preserves exact historical JSON and pending proposal while old draft can publish (6.580875ms)
+✔ three-way overlap/deletion retain all sides; complete validation parses references and canonical hashes (0.460625ms)
+✔ apply rollback preserves draft/token and idempotency; confirmed deletion differs from empty file (4.649833ms)
+✔ independent connection save invalidates preview; permission revocation also blocks successful replay (4.120083ms)
+✔ adopting latest content rejects empty publication without writes; replay and subsequent edits succeed (5.248458ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 380.630416
+
+> test:runtime
+> npm --prefix modules/runtime test
+
+
+> @skill-library/runtime@0.1.0 test
+> node --experimental-strip-types --test test/*.test.ts
+
+✔ full catalog freezes resources, children and idempotent retries; new tasks follow host (6.365292ms)
+✔ actual invocations rebuild latest prompts after missed, repeated and continuous updates (4.021583ms)
+✔ two database connections reject stale preference and serialize task against changed policy (3.65675ms)
+✔ ownership, team isolation, revoked host access and runtime input validation (2.2915ms)
+✔ missing, corrupt, mutated and cross-team resource versions fail without fallback (2.182167ms)
+✔ database recovery and separate process retain snapshots, invocation and preference (60.222458ms)
+✔ publication during latest-target resource validation rejects the outdated confirmation (3.1995ms)
+✔ writer process exit recovers committed session, invocation, preference and old resources (64.115917ms)
+✔ resource validation rejects traversal, duplicate and missing entry point before acceptance (2.7895ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 220.856083
+
+> test:web
+> npm --prefix modules/web test
+
+
+> @skill-library/web@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.5 /private/var/folders/8g/tf_4yqbs6fbfkhxzd_m66v840000gn/T/production-operations-combined-2rue8bdb/src/modules/web
+
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  22:46:03
+   Duration  7.39s (tests 93%, environment 5%, setup 1%, transform 1%)
+
+
+> test:broadcast
+> npm --prefix modules/broadcast test
+
+
+> @skill-library/broadcast@2.0.0 test
+> node --experimental-strip-types --test test/*.test.ts
+
+✔ HTTP whitelist, trusted actor, origin/header/input protection and safe failures (26.515333ms)
+✔ two HTTP/SSE clients: publication authority, external log polling, replay, teams, reconnect, cancellation (374.647833ms)
+✔ SSE cursor validation and revoked identity never starts a stream (16.825458ms)
+✔ explicit routes cover all v2 methods through browser-safe HTTP client (9.1965ms)
+✔ client rejects malformed events, filters foreign teams and ignores queued callbacks after unsubscribe (0.382625ms)
+✔ SSE defense filters a faulty cross-team log and Last-Event-ID wins over older query cursor (3.105583ms)
+✔ slow HTTP body times out and stalled SSE backpressure is bounded (200.293125ms)
+✔ default accepts escaped 2 MiB text packages and preserves bounded actionable domain errors (47.714542ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 762.651792
+
+> test:publication
+> node --experimental-strip-types --test acceptance/publication.test.ts
+
+✔ real publication -> broadcast -> author confirmation -> publication; no reviewer and no silent merge (77.392291ms)
+✔ a separate publishing process reaches an already connected SSE client (101.742834ms)
+✔ disconnect replay and changed preview target reject old resolution; running task keeps original resources (22.432209ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 297.733
+
+> test
+> node --test test/*.test.ts
+
+✔ real PostgreSQL migration, author update, concurrent publish and receipt replay (95.328041ms)
+✔ authorization, archive revision and immutable/FK/unique constraints (76.448458ms)
+✔ every publish fault rolls back version, pointer, draft, receipt, event and audit (78.333667ms)
+✔ draft discovery, stale preview/save races and package/script protections (70.576625ms)
+✔ same Pool runtime pins old resources, child/retry, preferences, archive, revocation (66.169292ms)
+✔ SQLite import preserves legacy versions, raw records, task references, and rolls back atomically (66.59525ms)
+✔ migration detects modified ledger and unknown versions; DDL failure recovers (51.943042ms)
+✔ independent Node processes serialize publication and durable event order (176.4825ms)
+✔ 001 to 002 upgrade preserves populated immutable versions and task snapshot (56.270541ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 847.578125
+
+> test
+> tsx --test *.test.ts *.test.tsx
+
+✔ 身份组件中文、加载态、权限与邀请呈现 (4.738959ms)
+✔ 生产配置缺失、测试提供方、非 HTTPS 来源均关闭登录 (0.672875ms)
+▶ 真实 PostgreSQL 与 HTTP 身份团队安全闭环
+  ✔ OAuth state 绑定浏览器、单次消费，拒绝伪造与跨站登录 (13.769083ms)
+  ✔ OAuth state 过期与取消登录失败关闭 (2.792542ms)
+  ✔ 真实 HTTP session、会话轮换，数据库仅保存摘要 (8.553ms)
+  ✔ CSRF、Origin、伪造 Actor、路由和正文边界 (8.041791ms)
+  ✔ 邀请验证邮箱、过期、并发单次接受、重放 (14.038125ms)
+  ✔ 最后管理员不可移除/降权，并发操作后仍有管理员 (8.676458ms)
+  ✔ 成员移除立即撤销权限，旧邀请不能恢复移除成员 (5.342125ms)
+  ✔ 邮箱相同不会合并第三方身份，未验证邮箱不能接受邀请 (6.559584ms)
+  ✔ HTTPS Cookie 标志、session 过期和账号/团队停用 (2.044542ms)
+  ✔ 浏览器 client 真实 HTTP 调用及 logout 持久撤销 (2.948916ms)
+✔ 真实 PostgreSQL 与 HTTP 身份团队安全闭环 (123.408334ms)
+✔ React 交互：团队切换隔离旧响应、错误保留输入、邀请与注销 (178.477667ms)
+✔ GitHub HTTP 适配 fixture：PKCE、固定端点、verified 邮箱和失败关闭（非真实提供方验收） (9.184125ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 688.274583
+
+> @skill-library/product@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.5 /private/var/folders/8g/tf_4yqbs6fbfkhxzd_m66v840000gn/T/production-operations-combined-2rue8bdb/src/modules/product
+
+
+ Test Files  4 passed (4)
+      Tests  21 passed (21)
+   Start at  22:46:15
+   Duration  1.08s (environment 48%, tests 23%, setup 11%, transform 10%, import 8%)
+
+
+> test
+> node --test test/*.test.ts
+
+✔ real HTTP + PG identity cookie/CSRF, injection rejection, owner reads and cost hook (147.163167ms)
+✔ browser disposal rejects late response and sends immutable identity scope (0.395875ms)
+✔ acceptance rollback removes snapshot, session and queue together; retries are idempotent (93.870625ms)
+✔ concurrent workers claim once, remote call holds no team lock, new task gets latest while child/retry pins complete resources (83.066958ms)
+✔ failed attempt explicit idempotent retry uses same task and version; cap blocks extra calls (73.293416ms)
+✔ claimed crash recovers without remote call; dispatched crash becomes uncertain; late result is fenced (70.558833ms)
+✔ timeouts and stop bound noncooperative providers; no automatic retry (109.192583ms)
+✔ cancellation fences late response; explicitly acknowledged retry preserves version (76.914708ms)
+✔ owner/team isolation and actual role recheck; revoked queued and running tasks never publish results (75.276875ms)
+✔ checksum mismatch prevents dispatch; result and relation constraints reject tampering (77.940292ms)
+✔ nested unit-of-work cannot cross actor or upgrade readonly, queue is bounded (82.488708ms)
+✔ independent worker process crash after dispatch recovers as uncertain without duplicate generation (172.086208ms)
+✔ targeted runOnce only runs the explicitly accepted demo task; received provider request id survives timeout (106.086334ms)
+✔ shutdown during resource preparation never dispatches and has no unhandled abort rejection (56.84525ms)
+✔ simultaneous independent Pool claims use one fencing token and one attempt (62.884833ms)
+✔ real adapter wire protocol is tested with explicit fake fetch, no remote execution claim (11.944792ms)
+✔ provider rejection, rate limit, 5xx and network are bounded and redact raw responses (0.49375ms)
+✔ invalid, truncated and oversized provider responses never become success (0.631125ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1254.502792
+
+> test:ui
+> vitest run
+
+
+ RUN  v5.0.5 /private/var/folders/8g/tf_4yqbs6fbfkhxzd_m66v840000gn/T/production-operations-combined-2rue8bdb/src/modules/execution
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  22:46:18
+   Duration  539ms (environment 66%, tests 18%, import 12%, transform 4%)
+
+
+> test
+> node --test test/*.test.ts
+
+✔ production config rejects missing/insecure/malformed settings; secrets can only have one source (2.988625ms)
+✔ fixed windows expire; principal churn cannot evict an active budget (0.128ms)
+✔ only exact trusted proxy peer and single canonical IP can affect client address (1.458541ms)
+✔ write classification and metric/error labels are bounded and secret-free (0.151875ms)
+✔ execution worker failure telemetry only emits bounded safety codes (0.872791ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 76.693459
+
+> @skill-library/product@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 34 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.47 kB │ gzip:  0.32 kB
+dist/assets/index-B1n75l8j.css   25.39 kB │ gzip:  6.12 kB
+dist/assets/index-BIThpdxY.js   275.71 kB │ gzip: 85.86 kB
+
+✓ built in 278ms
+
+> @skill-library/web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 22 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.47 kB │ gzip:  0.32 kB
+dist/assets/index-DFCed9_T.css   11.24 kB │ gzip:  3.33 kB
+dist/assets/index-CFuklGrI.js   260.01 kB │ gzip: 81.67 kB
+
+✓ built in 293ms
+✔ connected demo: cookie identity, isolation, stale draft, atomic publication and pinned tasks survive restart (52.681ms)
+✔ workspace admission is bounded and bootstrap does not trust supplied identity (8.038208ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 156.236833
+
+ RUN  v5.0.5 /private/var/folders/8g/tf_4yqbs6fbfkhxzd_m66v840000gn/T/production-operations-combined-2rue8bdb/src/integration
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  22:46:22
+   Duration  592ms (environment 42%, tests 35%, transform 13%, setup 8%, import 2%)
+
+✔ real HTTP/PG: request ids, private metrics, secret redaction, liveness/readiness and database failure (123.027125ms)
+✔ real HTTP: spoofed forwarded IP cannot evade login quota; Retry-After is returned (57.401667ms)
+✔ real HTTP: identity write and execution budgets; read/list do not spend execution quota (67.291542ms)
+✔ real PG/SSE: connection quota releases; graceful shutdown closes streams; redeploy preserves users and published resources (78.018ms)
+✔ migration mismatch fails before listen and preserves ledger (7.245083ms)
+✔ shutdown closes unused TCP while draining an active write response (55.846834ms)
+✔ actual production process: shared PG migration, execution module mounting without calls, SIGTERM, persistent restart (352.436125ms)
+{"time":"2026-11-02T06:46:23.058Z","event":"http.request","level":"info","requestId":"ee5d7d9d-12fd-4ec6-8ff9-105c48e563e5","route":"login","method":"GET","status":302,"durationMs":1.99}
+{"time":"2026-11-02T06:46:23.065Z","event":"http.request","level":"info","requestId":"acaeae46-a26d-4cda-a6f0-c1f603c54fb1","route":"callback","method":"GET","status":302,"durationMs":3.45}
+{"time":"2026-11-02T06:46:23.067Z","event":"http.request","level":"info","requestId":"537c3230-95f7-4643-a445-a5af8b87283f","route":"identity","method":"GET","status":200,"durationMs":0.95}
+{"time":"2026-11-02T06:46:23.069Z","event":"http.request","level":"info","requestId":"44d09101-0283-44ee-a44f-c57770762d5a","route":"login","method":"GET","status":302,"durationMs":0.14}
+{"time":"2026-11-02T06:46:23.071Z","event":"http.request","level":"info","requestId":"45ef7cee-e24d-40e5-941e-310c073f8bab","route":"callback","method":"GET","status":302,"durationMs":1.26}
+{"time":"2026-11-02T06:46:23.072Z","event":"http.request","level":"info","requestId":"2b062403-ff05-49d9-a558-a445ce95062d","route":"identity","method":"GET","status":200,"durationMs":0.49}
+{"time":"2026-11-02T06:46:23.075Z","event":"http.request","level":"info","requestId":"498b19d3-3ba9-45fa-8a01-20aed7ad3e62","route":"identity","method":"POST","status":200,"durationMs":2}
+{"time":"2026-11-02T06:46:23.079Z","event":"http.request","level":"info","requestId":"f405abb3-2ae4-41de-b324-3a55548b4fcc","route":"identity","method":"POST","status":200,"durationMs":2.57}
+{"time":"2026-11-02T06:46:23.082Z","event":"http.request","level":"info","requestId":"3c01fbc5-5eb9-436b-8b97-28476eb90345","route":"identity","method":"POST","status":200,"durationMs":2.23}
+{"time":"2026-11-02T06:46:23.087Z","event":"http.request","level":"info","requestId":"dbdccbc0-0ebd-4b94-bdeb-d6709d16021a","route":"library","method":"POST","status":200,"durationMs":4.46}
+{"time":"2026-11-02T06:46:23.093Z","event":"http.request","level":"info","requestId":"380772c2-cd14-4e55-9530-615ab024c885","route":"library","method":"POST","status":200,"durationMs":5.24}
+{"time":"2026-11-02T06:46:23.096Z","event":"http.request","level":"info","requestId":"bb747b89-9b9c-491d-bb10-d40bccaac24f","route":"library","method":"POST","status":200,"durationMs":2.27}
+{"time":"2026-11-02T06:46:23.099Z","event":"http.request","level":"info","requestId":"2b5668b8-f166-45f2-ac97-2406a281383e","route":"library","method":"POST","status":200,"durationMs":1.86}
+{"time":"2026-11-02T06:46:23.108Z","event":"http.request","level":"info","requestId":"6458eda3-63a2-4c4a-9de8-1da521694960","route":"library","method":"POST","status":200,"durationMs":7.72}
+{"time":"2026-11-02T06:46:23.127Z","event":"http.request","level":"info","requestId":"2356daf0-3bd2-4944-85a7-dd2df2813999","route":"library","method":"POST","status":200,"durationMs":1.57}
+{"time":"2026-11-02T06:46:23.130Z","event":"http.request","level":"info","requestId":"1ed89180-94ee-42a4-a300-6a53075e45fa","route":"library","method":"POST","status":200,"durationMs":1.96}
+{"time":"2026-11-02T06:46:23.137Z","event":"http.request","level":"info","requestId":"63b49776-c8eb-4638-9b66-0ac48058adab","route":"management","method":"POST","status":200,"durationMs":6.07}
+{"time":"2026-11-02T06:46:23.139Z","event":"http.request","level":"info","requestId":"a2dec334-7202-4ef9-80ee-92d8d91c1e4b","route":"runtime","method":"POST","status":200,"durationMs":1.6}
+{"time":"2026-11-02T06:46:23.142Z","event":"http.request","level":"info","requestId":"68f68bfe-fc1b-4646-a6f3-44638d4238e0","route":"runtime","method":"POST","status":200,"durationMs":2.75}
+{"time":"2026-11-02T06:46:23.144Z","event":"http.request","level":"info","requestId":"b755d917-8c26-4bb6-ae4e-139bce05d0b8","route":"library","method":"POST","status":200,"durationMs":1.26}
+{"time":"2026-11-02T06:46:23.146Z","event":"http.request","level":"info","requestId":"e14d4527-e76c-40e2-8cc4-485562427a25","route":"management","method":"POST","status":200,"durationMs":1.62}
+{"time":"2026-11-02T06:46:23.148Z","event":"http.request","level":"warn","requestId":"161be774-7c95-454b-ab83-f69ef77d170f","route":"management","method":"POST","status":409,"durationMs":1}
+{"time":"2026-11-02T06:46:23.149Z","event":"http.request","level":"info","requestId":"a6773b39-4ef8-4da2-923d-bb9c4709d4a4","route":"management","method":"POST","status":200,"durationMs":1.32}
+{"time":"2026-11-02T06:46:23.151Z","event":"http.request","level":"info","requestId":"9426ffbd-9973-4b63-9a82-6e9414c22f1d","route":"library","method":"POST","status":200,"durationMs":1.11}
+{"time":"2026-11-02T06:46:23.154Z","event":"http.request","level":"info","requestId":"e67a3f94-eade-4f9a-9b91-f61ca2c8387c","route":"runtime","method":"POST","status":200,"durationMs":2.29}
+{"time":"2026-11-02T06:46:23.156Z","event":"http.request","level":"info","requestId":"8a19583b-847b-431d-b33d-e46a85647492","route":"runtime","method":"POST","status":200,"durationMs":1.34}
+{"time":"2026-11-02T06:46:23.157Z","event":"http.request","level":"info","requestId":"ef227ded-2374-4afc-a2ae-f800308a2cd3","route":"management","method":"POST","status":200,"durationMs":0.89}
+{"time":"2026-11-02T06:46:23.158Z","event":"http.request","level":"info","requestId":"71698fdb-d35b-404c-b837-69a4c58bd2b5","route":"library","method":"POST","status":200,"durationMs":1.05}
+{"time":"2026-11-02T06:46:23.160Z","event":"http.request","level":"info","requestId":"db0d5c8e-93ff-4e38-939a-969a5a13b84c","route":"management","method":"POST","status":200,"durationMs":1.38}
+{"time":"2026-11-02T06:46:23.161Z","event":"http.request","level":"warn","requestId":"9f352c53-a14b-43cb-b817-89b349d5ca06","route":"management","method":"POST","status":400,"durationMs":0.56}
+{"time":"2026-11-02T06:46:23.162Z","event":"http.request","level":"info","requestId":"fd47e35c-d9e5-4aa5-8dbb-9f06e0001332","route":"identity","method":"POST","status":200,"durationMs":0.96}
+{"time":"2026-11-02T06:46:23.164Z","event":"http.request","level":"warn","requestId":"b83efd80-e634-43e6-bc84-bb10d5d51b0f","route":"library","method":"POST","status":404,"durationMs":0.92}
+{"time":"2026-11-02T06:46:23.165Z","event":"http.request","level":"info","requestId":"0da7b94e-2beb-42a2-a6e7-634e6052ded5","route":"identity","method":"POST","status":200,"durationMs":1.33}
+{"time":"2026-11-02T06:46:23.166Z","event":"http.request","level":"warn","requestId":"a9d1ed33-05e6-4b75-8bda-e528425853d2","route":"library","method":"POST","status":403,"durationMs":0.72}
+{"time":"2026-11-02T06:46:23.167Z","event":"http.request","level":"info","requestId":"5b5273c8-0b89-4f27-a30d-06da990fcabe","route":"events","method":"GET","status":200,"durationMs":67.66}
+{"time":"2026-11-02T06:46:23.222Z","event":"http.request","level":"info","requestId":"049da7ee-5506-4e48-b659-f96981c50a44","route":"library","method":"POST","status":200,"durationMs":38.59}
+{"time":"2026-11-02T06:46:23.231Z","event":"http.request","level":"warn","requestId":"5325a6a0-2913-45a1-a5c4-5b886f7682e5","route":"management","method":"POST","status":403,"durationMs":1.06}
+{"time":"2026-11-02T06:46:23.232Z","event":"http.request","level":"warn","requestId":"cf288599-7f02-4f52-a5ed-701ded3dbe8f","route":"unknown_api","method":"POST","status":404,"durationMs":0.09}
+{"time":"2026-11-02T06:46:23.232Z","event":"shutdown.started","level":"info"}
+{"time":"2026-11-02T06:46:23.232Z","event":"shutdown.completed","level":"info"}
+✔ 真实 PostgreSQL + 身份 HTTP + 产品适配：两位测试提供方用户、发布、管理、SSE、撤销 (248.919542ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 501.530542
+{"time":"2026-11-02T06:46:24.116Z","event":"http.request","level":"info","requestId":"e5688dd8-768d-486e-95fc-71253c349ac9","route":"static","method":"GET","status":200,"durationMs":1.99}
+{"time":"2026-11-02T06:46:24.125Z","event":"http.request","level":"info","requestId":"3f48f835-cafe-42dc-b238-9162b760e13c","route":"static","method":"GET","status":200,"durationMs":3.23}
+{"time":"2026-11-02T06:46:24.125Z","event":"http.request","level":"info","requestId":"2d699af7-a99c-409b-b8eb-6048a52a8881","route":"static","method":"GET","status":200,"durationMs":3.26}
+{"time":"2026-11-02T06:46:24.147Z","event":"http.request","level":"info","requestId":"4b7882f1-bd7a-4316-a586-b6f31e5a68e2","route":"identity","method":"GET","status":200,"durationMs":0.36}
+{"time":"2026-11-02T06:46:24.148Z","event":"http.request","level":"warn","requestId":"98ec17a7-efef-4410-9731-b5636c129e92","route":"static","method":"GET","status":404,"durationMs":0.53}
+{"time":"2026-11-02T06:46:24.202Z","event":"http.request","level":"info","requestId":"0a8d2e08-7032-45fb-a831-9ce450427247","route":"login","method":"GET","status":302,"durationMs":0.32}
+{"time":"2026-11-02T06:46:24.210Z","event":"http.request","level":"info","requestId":"78669337-fe1e-4b91-b4bd-ffa1eaf3936a","route":"callback","method":"GET","status":302,"durationMs":3.55}
+{"time":"2026-11-02T06:46:24.212Z","event":"http.request","level":"info","requestId":"4fd5bb12-b015-4602-878d-d4cf470ae06d","route":"static","method":"GET","status":200,"durationMs":0.44}
+{"time":"2026-11-02T06:46:24.220Z","event":"http.request","level":"info","requestId":"280e6b37-6991-4985-91a1-5341dd19cfb1","route":"identity","method":"GET","status":200,"durationMs":0.93}
+{"time":"2026-11-02T06:46:24.227Z","event":"http.request","level":"info","requestId":"8002ed42-75a0-4f49-9038-15d41bc3c57c","route":"identity","method":"POST","status":200,"durationMs":2.48}
+{"time":"2026-11-02T06:46:24.265Z","event":"http.request","level":"info","requestId":"6973ba7a-c6dc-4848-acb3-cb747d3437cc","route":"identity","method":"POST","status":200,"durationMs":3.59}
+{"time":"2026-11-02T06:46:24.338Z","event":"http.request","level":"info","requestId":"906f0f1a-6f99-4da9-b3c2-5b2c4ba90726","route":"identity","method":"GET","status":200,"durationMs":1.23}
+{"time":"2026-11-02T06:46:24.344Z","event":"http.request","level":"info","requestId":"99f20b53-fe1f-400a-8c26-c6736a01566a","route":"management","method":"POST","status":200,"durationMs":5.36}
+{"time":"2026-11-02T06:46:24.345Z","event":"http.request","level":"info","requestId":"d06dd7d4-0aa4-451f-9298-5e52d5327852","route":"identity","method":"POST","status":200,"durationMs":7.59}
+{"time":"2026-11-02T06:46:24.345Z","event":"http.request","level":"info","requestId":"4747d1e6-a885-453c-ba7d-d0840827f3c6","route":"identity","method":"POST","status":200,"durationMs":7.62}
+{"time":"2026-11-02T06:46:24.347Z","event":"http.request","level":"info","requestId":"937ab395-a1c0-490c-8b29-78c895e20368","route":"identity","method":"GET","status":200,"durationMs":0.32}
+{"time":"2026-11-02T06:46:24.349Z","event":"http.request","level":"info","requestId":"57509c13-0780-425e-b496-b0729e3016d2","route":"identity","method":"POST","status":200,"durationMs":1.2}
+{"time":"2026-11-02T06:46:24.420Z","event":"http.request","level":"info","requestId":"6f5dc517-405d-4244-81dc-367ca64dacd8","route":"library","method":"POST","status":200,"durationMs":10.02}
+{"time":"2026-11-02T06:46:24.431Z","event":"http.request","level":"info","requestId":"3139bc59-6a86-4ece-8c2e-5275d800d883","route":"library","method":"POST","status":200,"durationMs":3.26}
+{"time":"2026-11-02T06:46:24.431Z","event":"http.request","level":"info","requestId":"aa388431-05b7-4fc5-86e9-a9b4e49605cf","route":"management","method":"POST","status":200,"durationMs":3.41}
+{"time":"2026-11-02T06:46:24.485Z","event":"http.request","level":"info","requestId":"502abb4f-5b7e-40fe-901c-20d7ae6f2e99","route":"library","method":"POST","status":200,"durationMs":8.07}
+{"time":"2026-11-02T06:46:24.564Z","event":"http.request","level":"info","requestId":"c9fda23b-bee8-4359-bb27-5c9353be6624","route":"library","method":"POST","status":200,"durationMs":20.52}
+{"time":"2026-11-02T06:46:24.568Z","event":"http.request","level":"info","requestId":"4b462c78-47cd-4890-a226-4a6d5a498cd2","route":"library","method":"POST","status":200,"durationMs":2.66}
+{"time":"2026-11-02T06:46:24.571Z","event":"http.request","level":"info","requestId":"922127b2-5973-426b-bafc-83eba40dac0d","route":"library","method":"POST","status":200,"durationMs":1.96}
+{"time":"2026-11-02T06:46:24.572Z","event":"http.request","level":"info","requestId":"861b6b16-0f79-4b32-9ba7-afb8a83900ee","route":"management","method":"POST","status":200,"durationMs":2.38}
+{"time":"2026-11-02T06:46:24.572Z","event":"http.request","level":"info","requestId":"19c0979f-bacd-4622-85b1-f8eb594e7ce4","route":"library","method":"POST","status":200,"durationMs":2.63}
+{"time":"2026-11-02T06:46:24.585Z","event":"http.request","level":"info","requestId":"22f5ba32-093c-4a41-8d63-68c7e1c4b14b","route":"library","method":"POST","status":200,"durationMs":1.35}
+{"time":"2026-11-02T06:46:24.612Z","event":"http.request","level":"info","requestId":"4dfce23e-8eb0-4e5b-8d6a-a70cd426cbf6","route":"library","method":"POST","status":200,"durationMs":2.05}
+{"time":"2026-11-02T06:46:24.628Z","event":"http.request","level":"info","requestId":"31cef7de-95d2-4707-be38-31ef24bacf0c","route":"management","method":"POST","status":200,"durationMs":1.63}
+{"time":"2026-11-02T06:46:24.628Z","event":"http.request","level":"info","requestId":"4912526a-44ea-42a9-ad44-bf51791c75f6","route":"library","method":"POST","status":200,"durationMs":2.11}
+{"time":"2026-11-02T06:46:24.699Z","event":"http.request","level":"info","requestId":"27df9152-06c7-405e-9568-4977aafc707a","route":"management","method":"POST","status":200,"durationMs":4.75}
+{"time":"2026-11-02T06:46:24.712Z","event":"http.request","level":"info","requestId":"e96ced7b-82c9-4ad9-9cae-4a0ef9af0a17","route":"library","method":"POST","status":200,"durationMs":1.8}
+{"time":"2026-11-02T06:46:24.712Z","event":"http.request","level":"info","requestId":"864e09e5-d73d-4684-8678-c31bf35db864","route":"management","method":"POST","status":200,"durationMs":2.04}
+{"time":"2026-11-02T06:46:24.715Z","event":"http.request","level":"info","requestId":"9a70c9d0-f3ad-4d0f-8fc7-dfd19bfa873d","route":"management","method":"POST","status":200,"durationMs":1.59}
+{"time":"2026-11-02T06:46:24.715Z","event":"http.request","level":"info","requestId":"58f5cc98-5619-4aba-be71-171b8baa2db3","route":"library","method":"POST","status":200,"durationMs":1.57}
+{"time":"2026-11-02T06:46:24.749Z","event":"http.error","level":"error","requestId":"413eee5b-09ee-44ba-8ef7-cf98c858ec3e","route":"execution","method":"POST","status":503,"durationMs":0.14,"code":"HTTP_5XX"}
+{"time":"2026-11-02T06:46:24.807Z","event":"http.request","level":"info","requestId":"91962bce-185f-414d-981f-2c5859831d41","route":"management","method":"POST","status":200,"durationMs":1.73}
+{"time":"2026-11-02T06:46:24.845Z","event":"http.request","level":"info","requestId":"d8571563-f689-4479-9c8d-7009e0899600","route":"library","method":"POST","status":200,"durationMs":1.83}
+{"time":"2026-11-02T06:46:24.861Z","event":"http.request","level":"info","requestId":"82897004-6a7d-42c1-8ffe-19577d255d02","route":"management","method":"POST","status":200,"durationMs":2.27}
+{"time":"2026-11-02T06:46:24.861Z","event":"http.request","level":"info","requestId":"52177876-111e-49ec-b436-2a33a2de2a43","route":"library","method":"POST","status":200,"durationMs":2.45}
+{"time":"2026-11-02T06:46:24.897Z","event":"http.request","level":"info","requestId":"36e02785-7f5f-486b-9d67-79f245f242ab","route":"library","method":"POST","status":200,"durationMs":2.6}
+{"time":"2026-11-02T06:46:24.897Z","event":"http.request","level":"info","requestId":"519bb3d5-2d10-4845-8f7a-58b9bf3f23b6","route":"library","method":"POST","status":200,"durationMs":2.84}
+{"time":"2026-11-02T06:46:24.911Z","event":"http.request","level":"info","requestId":"51ce1805-79dc-417d-9e90-a84198d83a6b","route":"library","method":"POST","status":200,"durationMs":2.03}
+{"time":"2026-11-02T06:46:24.997Z","event":"http.request","level":"info","requestId":"4f7c2cfe-8d72-428c-aabb-391f3ee5dd60","route":"library","method":"POST","status":200,"durationMs":3.95}
+{"time":"2026-11-02T06:46:25.052Z","event":"http.request","level":"info","requestId":"df56b253-2020-47ae-9e3b-af5ecf9b8ad6","route":"library","method":"POST","status":200,"durationMs":8.22}
+{"time":"2026-11-02T06:46:25.061Z","event":"http.request","level":"info","requestId":"9073e781-6275-4875-b638-43f34ec1a797","route":"library","method":"POST","status":200,"durationMs":2.07}
+{"time":"2026-11-02T06:46:25.064Z","event":"http.request","level":"info","requestId":"33171bc8-3b09-4f75-a30d-6094e927ea19","route":"library","method":"POST","status":200,"durationMs":2.17}
+{"time":"2026-11-02T06:46:25.064Z","event":"http.request","level":"info","requestId":"0e54539e-b170-4d39-9691-b3f4787e8a72","route":"library","method":"POST","status":200,"durationMs":1.88}
+{"time":"2026-11-02T06:46:25.064Z","event":"http.request","level":"info","requestId":"f1b0eed5-a74e-472b-aa64-d488adee1d09","route":"management","method":"POST","status":200,"durationMs":1.81}
+{"time":"2026-11-02T06:46:25.080Z","event":"http.request","level":"info","requestId":"e071d02d-1e2f-4ada-9263-f6e3f5e0bc65","route":"library","method":"POST","status":200,"durationMs":2.07}
+{"time":"2026-11-02T06:46:25.096Z","event":"http.request","level":"info","requestId":"5dadcb29-9c9f-4169-b359-796286d486ad","route":"library","method":"POST","status":200,"durationMs":2.61}
+{"time":"2026-11-02T06:46:25.112Z","event":"http.request","level":"info","requestId":"7139bed0-febf-49d0-b87f-438b869a5770","route":"management","method":"POST","status":200,"durationMs":2.61}
+{"time":"2026-11-02T06:46:25.113Z","event":"http.request","level":"info","requestId":"03a831c7-31ca-497c-b3eb-ba024d06c1d7","route":"library","method":"POST","status":200,"durationMs":3.6}
+{"time":"2026-11-02T06:46:25.212Z","event":"http.request","level":"info","requestId":"bc54f3d6-d067-4559-ab06-f64b33835226","route":"library","method":"POST","status":200,"durationMs":2.48}
+{"time":"2026-11-02T06:46:25.281Z","event":"http.request","level":"info","requestId":"9afa432c-8ce7-4fa7-a8fa-8edd5157fa47","route":"library","method":"POST","status":200,"durationMs":4.05}
+{"time":"2026-11-02T06:46:25.295Z","event":"http.request","level":"info","requestId":"31ab7c74-ef7c-41b1-8a38-e75b41e41cc9","route":"library","method":"POST","status":200,"durationMs":2.15}
+{"time":"2026-11-02T06:46:25.295Z","event":"http.request","level":"info","requestId":"af98d11e-c437-4532-a2e7-57fa8df4ffb6","route":"library","method":"POST","status":200,"durationMs":2.05}
+{"time":"2026-11-02T06:46:25.347Z","event":"http.request","level":"info","requestId":"85904ae7-ca38-45ab-b30a-bfebdd27e915","route":"library","method":"POST","status":200,"durationMs":2.89}
+{"time":"2026-11-02T06:46:25.374Z","event":"http.request","level":"info","requestId":"55312004-980d-48ce-ac76-bff1d2b05339","route":"management","method":"POST","status":200,"durationMs":14.33}
+{"time":"2026-11-02T06:46:25.375Z","event":"http.request","level":"info","requestId":"782eeb05-cc18-4bea-b370-538251d758e4","route":"library","method":"POST","status":200,"durationMs":15.09}
+{"time":"2026-11-02T06:46:25.412Z","event":"http.request","level":"info","requestId":"c198f1b4-d742-48fe-bbfe-c79a74c9c83a","route":"library","method":"POST","status":200,"durationMs":2.25}
+{"time":"2026-11-02T06:46:25.444Z","event":"http.request","level":"info","requestId":"8d9e2988-5183-48ee-b4dc-4d6b1c09ae9e","route":"management","method":"POST","status":200,"durationMs":4.44}
+{"time":"2026-11-02T06:46:25.448Z","event":"http.request","level":"info","requestId":"f9b885bb-9aa0-46a5-abe4-758504720c6d","route":"management","method":"POST","status":200,"durationMs":2.32}
+{"time":"2026-11-02T06:46:25.448Z","event":"http.request","level":"info","requestId":"4cbb085d-9f6c-434d-a2fd-7ee0ae9977f9","route":"library","method":"POST","status":200,"durationMs":2.56}
+{"time":"2026-11-02T06:46:25.451Z","event":"http.request","level":"info","requestId":"f4879f22-a13c-4b74-837e-0022bc9e1af3","route":"management","method":"POST","status":200,"durationMs":2.12}
+{"time":"2026-11-02T06:46:25.452Z","event":"http.request","level":"info","requestId":"e43fae07-da09-4553-8555-7e2796da701a","route":"library","method":"POST","status":200,"durationMs":2.65}
+{"time":"2026-11-02T06:46:25.529Z","event":"http.request","level":"info","requestId":"61080547-095b-4774-a2a0-c58d5ccf7d06","route":"library","method":"POST","status":200,"durationMs":2.6}
+{"time":"2026-11-02T06:46:25.563Z","event":"http.request","level":"info","requestId":"312e93ad-7b39-4c6b-88d3-cfb84bec7d40","route":"management","method":"POST","status":200,"durationMs":5.57}
+{"time":"2026-11-02T06:46:25.567Z","event":"http.request","level":"info","requestId":"2b051259-2067-4fc7-86e2-9b4177951111","route":"library","method":"POST","status":200,"durationMs":1.92}
+{"time":"2026-11-02T06:46:25.567Z","event":"http.request","level":"info","requestId":"05900552-d761-427e-b1e8-9a7ceadc9bf2","route":"management","method":"POST","status":200,"durationMs":1.65}
+{"time":"2026-11-02T06:46:25.570Z","event":"http.request","level":"info","requestId":"9659ea26-4278-4389-b6d8-f596ffb8f602","route":"management","method":"POST","status":200,"durationMs":1.61}
+{"time":"2026-11-02T06:46:25.570Z","event":"http.request","level":"info","requestId":"e825dca3-9f07-4e1e-a3f7-094137d6dce8","route":"library","method":"POST","status":200,"durationMs":2.16}
+{"time":"2026-11-02T06:46:25.646Z","event":"http.request","level":"info","requestId":"10bec483-ca4e-49ad-aa64-313de12be77e","route":"management","method":"POST","status":200,"durationMs":2}
+{"time":"2026-11-02T06:46:25.749Z","event":"http.request","level":"warn","requestId":"7888e4b8-9cf9-4267-8f66-ce98b382ef43","route":"events","method":"GET","status":499,"durationMs":1410.02}
+{"time":"2026-11-02T06:46:25.805Z","event":"shutdown.started","level":"info"}
+{"time":"2026-11-02T06:46:25.805Z","event":"shutdown.completed","level":"info"}
+✔ 桌面和窄屏 Chrome：真实 HTTP + PostgreSQL 产品流程（显式测试 OAuth 提供方） (2171.254625ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2414.030583
+
+> test
+> node --test --test-concurrency=1 *.test.ts
+
+✔ 真实双 context：v1 独立草稿 → 未保存提醒 → 过期拒绝 → 三方确认 v3 → 离线恢复 → 撤权 (1843.128833ms)
+✔ 真实 HTTP/PG：同基线并发恰好一个成功；幂等重试不增版本/事件；无冲突也须确认 (591.923583ms)
+✔ 真实 Chrome 延迟响应：保存/预览/同步期间继续输入，旧响应不覆盖；刷新恢复作者草稿 (1524.279167ms)
+✔ 真实 Chrome：无重叠修改仍须明确确认，未保存正文和新增远端资源一同保留 (1116.133ms)
+✔ 真实 Chrome：预览后连续远端发布和另标签保存，保留手工选择与本地内容 (1996.600542ms)
+✔ 真实 Chrome：发布回包丢失后原请求重试只发布一次，后续输入与修改说明保留 (1040.90425ms)
+✔ 真实 Chrome：降权关闭旧 SSE/工作区；离线撤权重连失效；账号与团队缓存不串用 (1505.720542ms)
+✔ 正式任务页 + 真实 HTTP/PG：明确 fixture 提供方的错误/重试/子任务/新版任务；撤权清除结果 (9509.286833ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19373.334042
+{
+  "passed": true,
+  "mode": "full; execution fixture, no external model",
+  "postgres": "17.11 (Homebrew)",
+  "archiveSha256": "e4dffefa58a05bbe246814e719ad887ac5d03076393db566e384129dccd07bbb",
+  "tables": {
+    "audit": {
+      "rows": 7,
+      "sha256": "770b01f2844575c7062871d07afcc58f9aa6009247b8460b865356d137007cb6"
+    },
+    "auth_identities": {
+      "rows": 2,
+      "sha256": "54701738bb1bd60bc3ff3e1d752563317a850547518b8a01b7ad1cd31159bc47"
+    },
+    "auth_sessions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "draft_previews": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "drafts": {
+      "rows": 3,
+      "sha256": "afc98ee3536e8f5b3dbe28ebbf49e69589afc1fc2a4fecdd948a8935247c7af5"
+    },
+    "events": {
+      "rows": 2,
+      "sha256": "97168ec2bce7800fcd5ba846c8a3869dc9480a48013b7e23291bcd19dba763b2"
+    },
+    "execution_attempts": {
+      "rows": 1,
+      "sha256": "2f5edbafbbf870d636c9dc971ff19d878b1736e88e19a3d742be01ca0a5f9094"
+    },
+    "execution_receipts": {
+      "rows": 1,
+      "sha256": "c52449d2f672ea86c33056a7594f1a69bea8a6bf9c1a6275f3776edb2e77fd55"
+    },
+    "execution_requests": {
+      "rows": 1,
+      "sha256": "8035a8e6a3b1bcf8de19812e1cb79875cf1b84ccdaeed6395d9d7fd04b9f4189"
+    },
+    "execution_results": {
+      "rows": 1,
+      "sha256": "c85a1b56b08ac7bb12d585fee165903b1c68c2b0a0150fc86f9790129445fdf3"
+    },
+    "execution_skills": {
+      "rows": 1,
+      "sha256": "76ecc4478e2348da8714778dba2cdda604bff13ed07767c08c43b023c7bdd93f"
+    },
+    "legacy_imports": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "legacy_records": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production_migrations": {
+      "rows": 2,
+      "sha256": "b9dda599eb842f62a5eb3b884fcc38e58078360292c63bdb5022e5b573b1bcfb"
+    },
+    "proposals": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "requests": {
+      "rows": 2,
+      "sha256": "ef5b59f84d026b4337e379f3b8c131ae20b50b340945dde748707d9f26928a24"
+    },
+    "runtime_invocations": {
+      "rows": 1,
+      "sha256": "f1dd6eae20350c9404d7fddfcafd2899d6c32dbacc37735fb41504b543aba8ae"
+    },
+    "runtime_preferences": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime_sessions": {
+      "rows": 2,
+      "sha256": "9476a5c7380566b65d94f667b3e877e8a32441988074b82fdcad9448d93de78a"
+    },
+    "runtime_task_versions": {
+      "rows": 2,
+      "sha256": "e752cfa7fdc111a089d240e599f2958318b79c5594f7126f7e0bda68f80fedad"
+    },
+    "runtime_tasks": {
+      "rows": 2,
+      "sha256": "c7bb674ba250604374720530283da393f23a73ba6f5e7fb2bad5e6a6f9a9b021"
+    },
+    "skill_maintainers": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "skills": {
+      "rows": 1,
+      "sha256": "11c530faedda91e877dee5f1c43757806ff5baae477a4b258ab9a6308000c5ac"
+    },
+    "team_invitations": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "team_memberships": {
+      "rows": 2,
+      "sha256": "3d7da574dcd921d8c016755ba6df0fdbce8bb9a871bf0ac866c091c113118b31"
+    },
+    "teams": {
+      "rows": 1,
+      "sha256": "2642fa3734414e6b0dd4613e8569d33df3d7461252398c0ab0d3757f8c6d7a34"
+    },
+    "users": {
+      "rows": 2,
+      "sha256": "28affb83a2f955b7c294ced07cbe93bc5d46f7d26d8fc83a24f1264c705302a3"
+    },
+    "versions": {
+      "rows": 2,
+      "sha256": "0fb17f80ef17aad56ba25201e38ebedf3fa5c12b39b31cfd5965b3a84fbdc889"
+    },
+    "sequence:events_sequence_seq": {
+      "rows": 1,
+      "sha256": "eeed7c864315e92de4d66125470493f0a5069f811c81751e3a74aff0bcbe429c"
+    },
+    "sequence:runtime_invocations_sequence_seq": {
+      "rows": 1,
+      "sha256": "aa8fa97b2990f7f94f9c6ffbd7a300fb9aacdd30e6449a990ab2c59940d2cea4"
+    }
+  },
+  "dumpMs": 53,
+  "restoreAndVerifyMs": 72,
+  "totalMs": 271,
+  "sourceDatabase": "ops_drill_source_38d61cde90534d4bb95508bae2c9dd03",
+  "targetDatabase": "ops_drill_restore_38d61cde90534d4bb95508bae2c9dd03",
+  "cleanup": "finally closes pools and drops only these two generated databases"
+}

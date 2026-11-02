@@ -25,7 +25,9 @@ async function setup() {
   mocks.create.mockReturnValue({
     library: f.library,
     runtime: f.runtime,
-    updateSource: f.updateSource,
+    // This App fixture deliberately offers a second team; its transport must
+    // support switching too (the single-team demo stream rejects that actor).
+    updateSource: { subscribe: vi.fn(() => () => {}) },
     dispose,
   });
   const teams: IdentityTeam[] = [

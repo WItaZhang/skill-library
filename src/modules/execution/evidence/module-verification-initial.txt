@@ -1,0 +1,101 @@
+
+added 29 packages, and audited 30 packages in 274ms
+
+3 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+added 93 packages, and audited 94 packages in 819ms
+
+11 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+added 110 packages, and audited 111 packages in 599ms
+
+21 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+> typecheck
+> tsc --noEmit
+
+
+> typecheck
+> tsc --noEmit
+
+
+> test
+> node --test test/*.test.ts
+
+✔ real PostgreSQL migration, author update, concurrent publish and receipt replay (97.911625ms)
+✔ authorization, archive revision and immutable/FK/unique constraints (72.412416ms)
+✔ every publish fault rolls back version, pointer, draft, receipt, event and audit (74.402875ms)
+✔ draft discovery, stale preview/save races and package/script protections (68.978459ms)
+✔ same Pool runtime pins old resources, child/retry, preferences, archive, revocation (67.741834ms)
+✔ SQLite import preserves legacy versions, raw records, task references, and rolls back atomically (69.208833ms)
+✔ migration detects modified ledger and unknown versions; DDL failure recovers (50.895708ms)
+✔ independent Node processes serialize publication and durable event order (208.725458ms)
+✔ 001 to 002 upgrade preserves populated immutable versions and task snapshot (61.375ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 891.036333
+
+> test
+> node --test test/*.test.ts
+
+✔ real HTTP + PG identity cookie/CSRF, injection rejection, owner reads and cost hook (151.378875ms)
+✔ browser disposal rejects late response and sends immutable identity scope (0.407209ms)
+✔ acceptance rollback removes snapshot, session and queue together; retries are idempotent (94.439125ms)
+✔ concurrent workers claim once, remote call holds no team lock, new task gets latest while child/retry pins complete resources (89.988083ms)
+✔ failed attempt explicit idempotent retry uses same task and version; cap blocks extra calls (82.298625ms)
+✔ claimed crash recovers without remote call; dispatched crash becomes uncertain; late result is fenced (70.505541ms)
+✔ timeouts and stop bound noncooperative providers; no automatic retry (109.94725ms)
+✔ cancellation fences late response; explicitly acknowledged retry preserves version (63.759708ms)
+✔ owner/team isolation and actual role recheck; revoked queued and running tasks never publish results (64.877417ms)
+✔ checksum mismatch prevents dispatch; result and relation constraints reject tampering (73.055791ms)
+✔ nested unit-of-work cannot cross actor or upgrade readonly, queue is bounded (81.603375ms)
+✔ independent worker process crash after dispatch recovers as uncertain without duplicate generation (195.436042ms)
+✔ targeted runOnce only runs the explicitly accepted demo task; received provider request id survives timeout (109.047083ms)
+✔ shutdown during resource preparation never dispatches and has no unhandled abort rejection (56.130375ms)
+✔ real adapter wire protocol is tested with explicit fake fetch, no remote execution claim (12.01625ms)
+✔ provider rejection, rate limit, 5xx and network are bounded and redact raw responses (0.725417ms)
+✔ invalid, truncated and oversized provider responses never become success (0.975ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1219.80125
+
+> test:ui
+> vitest run
+
+
+ RUN  v5.0.5 /Users/qianqian/orca/workspaces/skill-library/production-execution/src/modules/execution
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  22:38:43
+   Duration  414ms (environment 59%, tests 25%, import 10%, transform 6%)
+
