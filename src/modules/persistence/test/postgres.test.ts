@@ -48,7 +48,7 @@ test('real PostgreSQL migration, author update, concurrent publish and receipt r
  await s.publishDraft(la,publish(synced));
  assert.equal((await s.listVersions(a,skill.id)).length,3);
  assert.deepEqual((await s.getVersion(a,v1.id)).content,content());
- assert.equal((await pool.query('SELECT count(*) FROM production_migrations')).rows[0].count,'1');
+ assert.equal((await pool.query('SELECT count(*) FROM production_migrations')).rows[0].count,'2');
 });
 test('authorization, archive revision and immutable/FK/unique constraints',{skip:!url},async t=>{
  const {pool,service:s,a,b,v}=await fixture(t);

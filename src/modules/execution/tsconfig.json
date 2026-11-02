@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2024","module":"NodeNext","moduleResolution":"NodeNext","strict":true,"noEmit":true,"allowImportingTsExtensions":true,"skipLibCheck":true,"jsx":"react-jsx"},"include":["*.ts","*.tsx","test/*.ts","test/*.tsx","../../contracts/*.ts"]}

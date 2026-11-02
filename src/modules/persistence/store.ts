@@ -3,15 +3,27 @@ import type { Pool, PoolClient } from 'pg';
 import { DomainError, type Actor } from '../../contracts/index.ts';
 import { fail } from './content.ts';
 export type Table = 'skills'|'versions'|'drafts'|'proposals'|'audit';
+interface UnitOfWork { client: PoolClient; actor: Actor; write: boolean }
+// All repositories sharing a Pool participate in the same async transaction.
+// This lets execution acceptance compose existing runtime calls without a second commit.
+const scopes = new WeakMap<Pool, AsyncLocalStorage<UnitOfWork>>();
 export function createStore(pool: Pool) {
- const scope = new AsyncLocalStorage<PoolClient>();
+ let scope = scopes.get(pool);
+ if (!scope) { scope = new AsyncLocalStorage<UnitOfWork>(); scopes.set(pool, scope); }
+ const context = scope;
  const query = (sql: string, values: unknown[] = []) => {
-  const client = scope.getStore();
+  const client = context.getStore()?.client;
   if (!client) throw new Error('Repository requires transaction');
   return client.query(sql, values);
  };
  const transaction = async <T>(actor: Actor, write: boolean, body: (trusted: Actor)=>Promise<T>): Promise<T> => {
   if (!actor || !/^[0-9a-f-]{36}$/i.test(actor.userId) || !/^[0-9a-f-]{36}$/i.test(actor.teamId)) fail('FORBIDDEN','身份无效');
+  const nested = context.getStore();
+  if (nested) {
+   if (nested.actor.userId !== actor.userId || nested.actor.teamId !== actor.teamId || (write && !nested.write))
+    fail('FORBIDDEN', '事务身份或写入范围不一致');
+   return body(nested.actor);
+  }
   const client = await pool.connect();
   try {
    await client.query('BEGIN');
@@ -25,7 +37,7 @@ export function createStore(pool: Pool) {
     WHERE m.team_id=$1 AND m.user_id=$2 AND m.status='active' AND u.status='active' FOR SHARE OF m,u`,[actor.teamId,actor.userId]);
    if (!result.rows.length) fail('FORBIDDEN','身份无效或团队权限已撤销');
    const trusted = {...actor, role:result.rows[0].role};
-   const value = await scope.run(client,()=>body(trusted));
+   const value = await context.run({client, actor:trusted, write},()=>body(trusted));
    await client.query('COMMIT');
    return value;
   } catch (error) {
