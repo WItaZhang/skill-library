@@ -332,6 +332,13 @@ test(
       }
       assert.ok(ended);
       abort.abort();
+      // JSON escaping can make a valid 2 MiB package exceed its raw byte size.
+      const largeContent = "\n".repeat(2 * 1024 * 1024);
+      const large = await rpc(alice, team.id, "createSkill", [{
+        name: "最大合法文本包", description: "传输边界", maintainerIds: [],
+        content: { files: [{ ...initial.files[0], content: largeContent }] },
+      }]);
+      assert.equal(large.draft.content.files[0].content, largeContent);
       const noCsrf = await fetch(origin + "/api/management/listManagedSkills", {
         method: "POST",
         headers: {

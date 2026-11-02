@@ -19,7 +19,6 @@ export function createProductionLibraryHandler(options: {
   const legacy = createLibraryHttpHandler({
     ...options,
     allowedOrigins: [options.publicOrigin],
-    maxBodyBytes: 1024 * 1024,
   });
   const service = options.library;
   const routes = new Map<

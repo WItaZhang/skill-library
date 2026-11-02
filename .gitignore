@@ -9,3 +9,8 @@
 **/.env.local
 .DS_Store
 
+src/node_modules
+src/.release/
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
