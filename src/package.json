@@ -2,7 +2,9 @@
   "name": "skill-library",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test:contracts": "node --experimental-strip-types --test contracts/*.test.ts",
     "test:service": "npm --prefix modules/service test",
@@ -10,7 +12,12 @@
     "test:web": "npm --prefix modules/web test",
     "test:broadcast": "npm --prefix modules/broadcast test",
     "test:publication": "node --experimental-strip-types --test acceptance/publication.test.ts",
-    "test": "npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web && npm run test:broadcast && npm run test:publication"
+    "test": "npm run test:contracts && npm run test:service && npm run test:runtime && npm run test:web && npm run test:broadcast && npm run test:publication",
+    "install:production": "sh deployment/install.sh",
+    "start:production": "node integration/production-start.ts",
+    "check:production": "node deployment/validate-config.ts",
+    "verify:release": "sh integration/verify-release.sh",
+    "test:operations": "npm test --prefix modules/operations",
+    "backup:drill": "node modules/operations/backup-drill.ts"
   }
 }
-

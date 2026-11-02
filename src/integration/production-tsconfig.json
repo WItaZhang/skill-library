@@ -7,13 +7,21 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"],
-    "typeRoots": ["../modules/product/node_modules/@types"]
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "../modules/product/node_modules/@types"
+    ]
   },
   "include": [
     "production-server.ts",
     "production-start.ts",
     "production-http.ts",
-    "production.test.ts"
+    "production.test.ts",
+    "operations.test.ts",
+    "../deployment/healthcheck.ts",
+    "../deployment/validate-config.ts",
+    "../deployment/prepare-secrets.ts"
   ]
 }

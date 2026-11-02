@@ -1,0 +1,28 @@
+groups:
+  - name: skill-library
+    rules:
+      - alert: SkillLibraryDown
+        expr: up{job="skill-library"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: '应用指标抓取失败；检查容器、密钥和启动日志'}
+      - alert: SkillLibraryNotReady
+        expr: skill_ready == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: '应用未就绪；检查 PostgreSQL 与迁移日志'}
+      - alert: SkillLibraryErrors
+        expr: sum(rate(skill_http_requests_total{status=~"5.."}[5m])) > 0.01
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: '持续服务错误；按 requestId 与时间定位结构化错误日志'}
+      - alert: SkillLibraryDatabaseQueue
+        expr: skill_pg_waiting_requests > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: '数据库连接等待持续；检查慢事务与连接预算'}
+      - alert: SkillLibraryLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(skill_http_duration_seconds_bucket{route!="events"}[5m]))) > 2
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: '非 SSE 请求 p95 超过 2 秒'}
