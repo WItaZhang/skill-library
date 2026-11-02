@@ -1,0 +1,116 @@
+.management,
+.draft-recovery {
+  margin: 1rem 0;
+}
+.management form {
+  max-width: 42rem;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #d7e1dc;
+  border-radius: 12px;
+}
+.management label {
+  display: block;
+  margin: 0.8rem 0;
+}
+.management input,
+.management textarea {
+  width: 100%;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.comparison > div {
+  min-width: 0;
+}
+.comparison pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 1rem;
+  background: #f1f5f3;
+}
+.production-account {
+  padding: 1rem;
+  border-bottom: 1px solid #d7e1dc;
+}
+.production-account select {
+  max-width: 100%;
+}
+.production-auth {
+  max-width: 48rem;
+  margin: 3rem auto;
+  padding: 1.5rem;
+}
+@media (max-width: 700px) {
+  .comparison {
+    grid-template-columns: 1fr;
+  }
+  .management .actions {
+    flex-wrap: wrap;
+  }
+  .version-row {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
+.product .catalog-toolbar .archive-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  white-space: nowrap;
+}
+.product .catalog-toolbar .archive-filter input {
+  width: auto;
+  margin: 0;
+}
+.product .production-account {
+  padding: 12px 0;
+  overflow-wrap: anywhere;
+}
+.product .production-account form {
+  margin: 12px 0;
+}
+.product .production-account input {
+  max-width: 100%;
+}
+.product .production-account ul {
+  padding-left: 16px;
+}
+.product-sidebar {
+  overflow-y: auto;
+}
+@media (max-width: 700px) {
+  .product .product-sidebar-bottom {
+    position: static;
+    margin-top: 14px;
+  }
+  .product .product-sidebar-bottom > button {
+    display: none;
+  }
+  .product .production-account {
+    padding: 0;
+    border: 0;
+  }
+  .product .production-account > section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .product .production-account details {
+    margin-top: 8px;
+  }
+  .product .catalog-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .product .catalog-toolbar > label:first-child {
+    width: 100%;
+    max-width: none;
+  }
+}
