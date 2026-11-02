@@ -23,6 +23,8 @@
     "../deployment/healthcheck.ts",
     "../deployment/validate-config.ts",
     "../deployment/prepare-secrets.ts",
-    "production-process.test.ts"
+    "production-process.test.ts",
+    "../local/*.ts",
+    "../modules/local/*.ts"
   ]
 }

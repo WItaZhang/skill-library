@@ -20,6 +20,7 @@ npm run test:ui --prefix src/modules/execution
 npm test --prefix src/modules/operations
 npm run build --prefix src/modules/product
 npm run build --prefix src/modules/web
+node --test src/modules/local/*.test.ts
 node --test src/integration/application.test.ts
 (cd src/integration && ../modules/product/node_modules/.bin/vitest run --config vite.test.config.ts)
 node --test src/integration/production.test.ts src/integration/operations.test.ts src/integration/production-process.test.ts

@@ -1,4 +1,8 @@
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import type { Socket } from "node:net";
 import { readFile, stat, realpath } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
@@ -8,6 +12,8 @@ import {
   createIdentityHttpHandler,
 } from "../modules/identity/index.ts";
 import type { IdentityOptions } from "../modules/identity/types.ts";
+import type { IdentityService } from "../modules/identity/types.ts";
+import type { ProductionLibraryService } from "../contracts/production.ts";
 import {
   migrate,
   createPostgresLibraryService,
@@ -33,6 +39,10 @@ export async function createProductionApplication(
     webDir: string;
     pollIntervalMs?: number;
     executionFactory?: ExecutionFactory;
+    localFilesFactory?: (context: {
+      identity: IdentityService;
+      library: ProductionLibraryService;
+    }) => (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
     operations?: {
       logger?: LogSink;
       metricsToken?: string;
@@ -43,11 +53,14 @@ export async function createProductionApplication(
   },
 ) {
   const telemetry = createTelemetry(options.operations?.logger);
+  if (options.localFilesFactory && options.mode !== "local")
+    throw new Error("文件目录连接只允许本机模式");
   const identity = createIdentityService(options);
   // Complete migration before returning a listenable server. No partial availability.
   await migrate(options.pool);
   const library = createPostgresLibraryService({ pool: options.pool });
   const runtime = createPostgresRuntimeService({ pool: options.pool });
+  const localFiles = options.localFilesFactory?.({ identity, library });
   const identities = createIdentityHttpHandler({ identity });
   const transport = createProductionLibraryHandler({
     library,
@@ -136,6 +149,17 @@ export async function createProductionApplication(
         res.end(JSON.stringify(body));
       };
       try {
+        if (
+          options.mode === "local" &&
+          (req.headers.host !== new URL(options.publicOrigin).host ||
+            req.socket.remoteAddress !== "127.0.0.1" ||
+            req.headers["sec-fetch-site"] === "cross-site")
+        ) {
+          json(403, {
+            error: { code: "FORBIDDEN", message: "仅允许本机访问" },
+          });
+          return;
+        }
         if (path === "/healthz" && req.method === "GET") {
           json(200, { status: "ok" });
           return;
@@ -177,6 +201,7 @@ export async function createProductionApplication(
         }
         if (!(await admit(req, res, path))) return;
         if (await identities(req, res)) return;
+        if (await localFiles?.(req, res)) return;
         if (await execution?.handle(req, res)) return;
         if (path.startsWith("/api/execution/")) {
           json(503, {

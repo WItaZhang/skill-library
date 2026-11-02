@@ -54,7 +54,8 @@ export function createIdentityService(
   options: IdentityOptions,
 ): IdentityService {
   const { pool } = options;
-  const production = options.mode !== "test";
+  const local = options.mode === "local";
+  const production = options.mode !== "test" && !local;
   const origin = new URL(options.publicOrigin);
   if (
     origin.origin !== options.publicOrigin ||
@@ -65,17 +66,29 @@ export function createIdentityService(
   if (
     production &&
     (options.testProvider ||
+      options.localAccess ||
       !options.github?.clientId?.trim() ||
       !options.github?.clientSecret?.trim())
   )
     throw new Error("生产 GitHub OAuth 凭证缺失或配置了测试提供方");
+  if (
+    local &&
+    (origin.hostname !== "127.0.0.1" ||
+      origin.protocol !== "http:" ||
+      !options.localAccess ||
+      !/^[a-f0-9]{64}$/.test(options.localAccess.keyHash) ||
+      options.testProvider ||
+      options.github)
+  )
+    throw new Error("本机访问仅支持 127.0.0.1 和独立的本地访问密钥");
+  if (local) uuid(options.localAccess!.userId);
   const provider =
     !production && options.testProvider
       ? options.testProvider
       : options.github
         ? createGitHubProvider(options.github)
         : null;
-  if (!provider) throw new Error("未配置登录提供方");
+  if (!provider && !local) throw new Error("未配置登录提供方");
   const secure = origin.protocol === "https:";
   const sessionName = secure ? "__Host-sl_session" : "sl_session";
   const stateName = secure ? "__Host-sl_oauth" : "sl_oauth";
@@ -199,7 +212,45 @@ export function createIdentityService(
     });
   }
   const service: IdentityService = {
+    authentication: local ? "local" : "github",
+    ...(local
+      ? {
+          async localLogin(req: IncomingMessage, key: string) {
+            if (
+              req.headers.origin !== origin.origin ||
+              req.headers.host !== origin.host ||
+              req.socket.remoteAddress !== "127.0.0.1" ||
+              typeof key !== "string" ||
+              !equal(hash(key), options.localAccess!.keyHash)
+            )
+              return deny("本机访问密钥无效，请通过启动器重新打开");
+            const token = secret();
+            await tx(async (c) => {
+              const user = await c.query(
+                "SELECT id FROM users WHERE id=$1 AND status='active' FOR SHARE",
+                [options.localAccess!.userId],
+              );
+              if (!user.rowCount) deny("账号已停用");
+              await c.query(
+                "UPDATE auth_sessions SET revoked_at=now() WHERE token_hash=$1 AND revoked_at IS NULL",
+                [hash(cookie(req, sessionName))],
+              );
+              await c.query(
+                "INSERT INTO auth_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,$4)",
+                [
+                  randomUUID(),
+                  options.localAccess!.userId,
+                  hash(token),
+                  new Date(Date.now() + ttl),
+                ],
+              );
+            });
+            return { cookies: [setCookie(sessionName, token, ttl)] };
+          },
+        }
+      : {}),
     async login(req) {
+      if (local) return { location: "/", cookies: [] };
       const fetchSite = req.headers["sec-fetch-site"];
       if (fetchSite === "cross-site") deny("请从本站发起登录");
       for (const [k, v] of pending)
@@ -224,6 +275,7 @@ export function createIdentityService(
       };
     },
     async callback(req) {
+      if (local) return deny("本机模式不使用 OAuth 回调");
       const url = new URL(req.url!, origin);
       const state = url.searchParams.get("state") ?? "";
       const entry = pending.get(hash(state));

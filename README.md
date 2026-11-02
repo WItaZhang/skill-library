@@ -83,6 +83,8 @@ Explore the [database design and migrations](src/modules/persistence/README.md),
 
 ## Get started
 
+**Start with your own skills on macOS.** Import existing skill folders, edit and publish versions, then explicitly write them back with backups and external-change checks. The [personal library guide](docs/personal-library.md) walks through the private local setup; no hosting account or GitHub OAuth app is required.
+
 Self-host Skill Library with **Node.js 24+ and PostgreSQL 17+**. Configure an HTTPS origin and a GitHub OAuth app for your workspace. The [deployment guide](docs/deployment/runbook.md) covers Docker Compose, secrets, backups, and monitoring.
 
 From the repository root:

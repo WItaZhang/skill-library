@@ -62,6 +62,8 @@
 
 ## 开始使用
 
+**先用它管理你自己的技能。** macOS 本机版可以导入现有 skill 目录，在网页中编辑和发布，再带备份写回原目录；发现外部修改时会要求先处理差异。按照[个人技能库指南](docs/personal-library.md)启动，无需服务器或 GitHub OAuth 应用。
+
 使用 **Node.js 24+ 和 PostgreSQL 17+** 自行部署，配置 HTTPS 访问地址与 GitHub OAuth 应用。[部署指南](docs/deployment/runbook.md)提供 Docker Compose、密钥、备份和监控配置。
 
 在仓库根目录执行：

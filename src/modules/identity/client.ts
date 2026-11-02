@@ -26,6 +26,8 @@ export function createIdentityClient(
     return result.data;
   }
   const client: IdentityClient = {
+    authentication: () => call("authentication"),
+    localLogin: (key) => call("localLogin", { key }),
     loginUrl: base + "login",
     async session() {
       const s = await call<IdentitySession | null>("session");

@@ -51,13 +51,20 @@ export interface OAuthProvider {
 export interface IdentityOptions {
   pool: Pool;
   publicOrigin: string;
-  mode?: "production" | "test";
+  mode?: "production" | "test" | "local";
+  /** Only the loopback-only personal entry point may configure local access. */
+  localAccess?: { userId: string; keyHash: string };
   github?: { clientId: string; clientSecret: string };
   testProvider?: OAuthProvider;
   sessionTtlMs?: number;
   invitationTtlMs?: number;
 }
 export interface IdentityService {
+  authentication?: "github" | "local";
+  localLogin?(
+    request: IncomingMessage,
+    key: string,
+  ): Promise<{ cookies: string[] }>;
   login(
     request: IncomingMessage,
   ): Promise<{ location: string; cookies: string[] }>;
@@ -95,6 +102,8 @@ export interface IdentityService {
   ): Promise<void>;
 }
 export interface IdentityClient {
+  authentication?(): Promise<"github" | "local">;
+  localLogin?(key: string): Promise<void>;
   loginUrl: string;
   session(): Promise<IdentitySession | null>;
   logout(): Promise<void>;

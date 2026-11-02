@@ -47,6 +47,10 @@ export function IdentityPanel({
   const [session, setSession] = useState<IdentitySession | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
+  const [authentication, setAuthentication] = useState<"github" | "local">(
+    "github",
+  );
+  const [key, setKey] = useState("");
   const generation = useRef(0);
   const notify = useRef(onSessionChange);
   notify.current = onSessionChange;
@@ -56,6 +60,12 @@ export function IdentityPanel({
     setLoading(true);
     setSession(null);
     setError("");
+    void client
+      .authentication?.()
+      .then((method) => {
+        if (active) setAuthentication(method);
+      })
+      .catch(() => {});
     client
       .session()
       .then((s) => {
@@ -100,6 +110,38 @@ export function IdentityPanel({
           <span>{session.user.displayName}</span>{" "}
           <button onClick={logout}>退出登录</button>
         </>
+      ) : authentication === "local" ? (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            setError("");
+            try {
+              await client.localLogin!(key);
+              const next = await client.session();
+              setKey("");
+              setSession(next);
+              notify.current?.(next);
+            } catch (e) {
+              setError(message(e));
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          <p>这是你的本机技能库。请使用启动器打开，或输入本机访问密钥。</p>
+          <label>
+            本机访问密钥{" "}
+            <input
+              type="password"
+              autoComplete="off"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              required
+            />
+          </label>
+          <button>进入我的技能库</button>
+        </form>
       ) : (
         <a href={client.loginUrl}>使用 GitHub 登录</a>
       )}

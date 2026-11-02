@@ -20,11 +20,31 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
     () => identityClient ?? createIdentityClient(),
     [identityClient],
   );
+  const [local, setLocal] = useState(false);
+  useEffect(() => {
+    void rawClient
+      .authentication?.()
+      .then((method) => setLocal(method === "local"))
+      .catch(() => {});
+  }, [rawClient]);
   const dirty = useRef(false);
   const epoch = useRef(0);
   const sessionRef = useRef<IdentitySession | null>(null);
   const [session, setSession] = useState<IdentitySession | null>(null);
   const [team, setTeam] = useState<IdentityTeam>();
+  useEffect(() => {
+    if (!local || !session || team) return;
+    let active = true;
+    void rawClient
+      .listTeams()
+      .then((teams) => {
+        if (active && teams.length === 1) setTeam(teams[0]);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [local, session, team, rawClient]);
   const [notice, setNotice] = useState("");
   const scopeRef = useRef<ReturnType<typeof createProductScope> | null>(null);
   const permit = () =>
@@ -141,7 +161,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
   const account = (
     <div className="production-account">
       {identity}
-      {session && (
+      {session && !local && (
         <details>
           <summary>团队与成员</summary>
           <TeamPicker
@@ -167,6 +187,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
         <Workspace
           key={`${session.user.id}:${session.csrfToken}:${team.id}:${team.role}`}
           session={session}
+          local={local}
           team={team}
           onForbidden={forbidden}
           scopeRef={scopeRef}
@@ -177,7 +198,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
         />
       ) : (
         <main className="production-auth">
-          <h1>团队技能库</h1>
+          <h1>{local ? "我的技能库" : "团队技能库"}</h1>
           {identity}
           {session && (
             <>
@@ -203,6 +224,7 @@ export function App({ identityClient }: { identityClient?: IdentityClient }) {
 }
 function Workspace({
   session,
+  local,
   team,
   onForbidden,
   scopeRef,
@@ -210,6 +232,7 @@ function Workspace({
   identityPanel,
 }: {
   session: IdentitySession;
+  local: boolean;
   team: IdentityTeam;
   onForbidden: () => void;
   scopeRef: React.RefObject<ReturnType<typeof createProductScope> | null>;
@@ -241,7 +264,8 @@ function Workspace({
   return (
     <ProductionProduct
       actor={actor}
-      execution={scope.execution}
+      execution={local ? undefined : scope.execution}
+      localAccess={local ? { csrfToken: session.csrfToken } : undefined}
       library={scope.library}
       updateSource={scope.updateSource}
       identityPanel={identityPanel}

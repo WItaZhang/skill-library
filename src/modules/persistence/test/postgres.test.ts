@@ -48,7 +48,7 @@ test('real PostgreSQL migration, author update, concurrent publish and receipt r
  await s.publishDraft(la,publish(synced));
  assert.equal((await s.listVersions(a,skill.id)).length,3);
  assert.deepEqual((await s.getVersion(a,v1.id)).content,content());
- assert.equal((await pool.query('SELECT count(*) FROM production_migrations')).rows[0].count,'2');
+ assert.equal((await pool.query('SELECT count(*) FROM production_migrations')).rows[0].count,'3');
 });
 test('authorization, archive revision and immutable/FK/unique constraints',{skip:!url},async t=>{
  const {pool,service:s,a,b,v}=await fixture(t);
@@ -216,5 +216,5 @@ test('001 to 002 upgrade preserves populated immutable versions and task snapsho
  const version=await library.publishDraft(actor,publish(draft));const {createPostgresRuntimeService}=await import('../runtime.ts');const runtime=createPostgresRuntimeService({pool});
  const session=await runtime.createSession(actor);const task=await runtime.createTask(actor,session.id,randomUUID());
  await migrate(pool);assert.deepEqual(await runtime.getTask(actor,task.taskId),task);assert.deepEqual(await library.getVersion(actor,version.id),version);
- assert.deepEqual((await pool.query('SELECT version FROM production_migrations ORDER BY version')).rows.map(r=>r.version),[1,2]);
+ assert.deepEqual((await pool.query('SELECT version FROM production_migrations ORDER BY version')).rows.map(r=>r.version),[1,2,3]);
 });

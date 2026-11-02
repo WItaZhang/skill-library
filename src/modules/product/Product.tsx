@@ -1,3 +1,4 @@
+import { LocalFiles } from "./LocalFiles";
 import type {
   ProductionLibraryService,
   ProductionSkill,
@@ -26,6 +27,7 @@ import "./product.css";
 
 type Screen =
   | { kind: "list" }
+  | { kind: "local" }
   | { kind: "detail"; skill: ProductionSkill }
   | { kind: "edit"; skill: ProductionSkill; source?: string; draft?: Draft }
   | { kind: "create" }
@@ -37,7 +39,9 @@ export function ProductionProduct({
   updateSource,
   onDirtyChange,
   identityPanel,
+  localAccess,
 }: {
+  localAccess?: { csrfToken: string };
   actor: Actor;
   library: ProductionLibraryService;
   runtime?: RuntimeService;
@@ -91,15 +95,17 @@ export function ProductionProduct({
       `${s.name} ${s.description}`.toLowerCase().includes(query.toLowerCase()),
     ) || [];
   const name =
-    screen.kind === "tasks"
-      ? "任务记录"
-      : screen.kind === "create"
-        ? "新建技能"
-        : screen.kind === "edit"
-          ? "编辑技能"
-          : screen.kind === "detail"
-            ? screen.skill.name
-            : "技能库";
+    screen.kind === "local"
+      ? "本机目录"
+      : screen.kind === "tasks"
+        ? "任务记录"
+        : screen.kind === "create"
+          ? "新建技能"
+          : screen.kind === "edit"
+            ? "编辑技能"
+            : screen.kind === "detail"
+              ? screen.skill.name
+              : "技能库";
   return (
     <div className="product">
       <a className="skip" href="#product-main">
@@ -117,16 +123,28 @@ export function ProductionProduct({
         </button>
         <div className="workspace-label">
           <span className="workspace-dot" />
-          团队工作空间
+          {localAccess ? "个人工作空间" : "团队工作空间"}
         </div>
         <nav aria-label="主导航">
           <button
-            aria-current={screen.kind !== "tasks" ? "page" : undefined}
+            aria-current={
+              screen.kind !== "tasks" && screen.kind !== "local"
+                ? "page"
+                : undefined
+            }
             onClick={() => navigate({ kind: "list" })}
           >
             <span aria-hidden>▤</span> 技能库{" "}
             <small>{catalog.data?.length ?? "—"}</small>
           </button>
+          {localAccess && (
+            <button
+              aria-current={screen.kind === "local" ? "page" : undefined}
+              onClick={() => navigate({ kind: "local" })}
+            >
+              <span aria-hidden>↔</span> 本机目录
+            </button>
+          )}
           {execution && (
             <button
               aria-current={screen.kind === "tasks" ? "page" : undefined}
@@ -152,7 +170,7 @@ export function ProductionProduct({
           <div>
             工作空间 <span>/</span> {name}
           </div>
-          <span>团队技能管理</span>
+          <span>{localAccess ? "我的技能库" : "团队技能管理"}</span>
         </header>
         <main id="product-main" className="product-main">
           {help && (
@@ -284,9 +302,19 @@ export function ProductionProduct({
                 )}
               </LoadState>
               <p className="list-note">
-                草稿仅自己可见；发布后，其他成员才能使用新版本。
+                {localAccess
+                  ? "先保存草稿，再发布版本。需要更新本机文件时，前往「本机目录」写回。"
+                  : "草稿仅自己可见；发布后，其他成员才能使用新版本。"}
               </p>
             </>
+          )}
+          {screen.kind === "local" && localAccess && (
+            <LocalFiles
+              actor={actor}
+              csrfToken={localAccess.csrfToken}
+              library={library}
+              onChanged={catalog.reload}
+            />
           )}
           {screen.kind === "create" && (
             <CreateSkill

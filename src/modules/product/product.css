@@ -157,3 +157,8 @@
     max-width: none;
   }
 }
+
+.local-source { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:24px 0; border-bottom:1px solid #e5e7eb; }
+.local-source p { overflow-wrap:anywhere; font-size:14px; color:#596273; }
+.local-source button { flex-shrink:0; }
+.local-source small { color:#596273; }

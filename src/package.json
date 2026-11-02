@@ -18,6 +18,10 @@
     "check:production": "node deployment/validate-config.ts",
     "verify:release": "sh integration/verify-release.sh",
     "test:operations": "npm test --prefix modules/operations",
-    "backup:drill": "node modules/operations/backup-drill.ts"
+    "backup:drill": "node modules/operations/backup-drill.ts",
+    "start:local": "node local/manage.ts open",
+    "import:local": "node local/manage.ts import",
+    "backup:local": "node local/manage.ts backup",
+    "test:local": "node --test modules/local/*.test.ts"
   }
 }

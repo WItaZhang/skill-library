@@ -136,7 +136,7 @@ export function createAdmission(options: {
     const ip = clientIp(req, options.trustedProxyIps ?? []);
     if (!take(res, "api_ip", ip, limits.apiIp)) return false;
     if (
-      ["/api/identity/login", "/api/identity/callback"].includes(path) &&
+      ["/api/identity/login", "/api/identity/callback", "/api/identity/localLogin"].includes(path) &&
       !take(res, "login_ip", ip, limits.loginIp)
     )
       return false;

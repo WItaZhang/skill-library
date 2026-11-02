@@ -51,7 +51,18 @@ export function createIdentityHttpHandler({
     };
     try {
       const method = path.slice("/api/identity/".length);
-      if (
+      if (req.method === "GET" && method === "authentication") {
+        json(200, { data: identity.authentication ?? "github" });
+      } else if (
+        req.method === "POST" &&
+        method === "localLogin" &&
+        identity.localLogin
+      ) {
+        const input = await body(req);
+        const result = await identity.localLogin(req, input.key);
+        res.setHeader("Set-Cookie", result.cookies);
+        json(200, { data: null });
+      } else if (
         req.method === "GET" &&
         (method === "login" || method === "callback")
       ) {
