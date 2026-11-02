@@ -29,7 +29,14 @@ for peer, ref, paths in [
         elif destination.exists(): destination.unlink()
     archive = subprocess.check_output(['git', '-C', str(peer), 'archive', '--format=tar', ref, '--', *paths])
     with tarfile.open(fileobj=io.BytesIO(archive)) as files:
-        files.extractall(target, filter='data')
+        # Python 3.9 ships on some development Macs; validate data members without
+        # relying on the newer tarfile filter keyword. No links/devices are needed.
+        members = files.getmembers()
+        for member in members:
+            path = pathlib.PurePosixPath(member.name)
+            if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+                raise ValueError('Unsafe/non-data archive member: ' + member.name)
+        files.extractall(target, members=members)
 evidence = {}
 for name, source, ref in [('collaboration', root, 'HEAD'), ('execution', args.execution, args.execution_ref), ('operations', args.operations, args.operations_ref)]:
     evidence[name] = {
